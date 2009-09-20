@@ -132,6 +132,11 @@ Stream subclass: XMLPullParser [
 	^self current at: attName ifNone: aBlock
     ]
 
+    atEnd [
+	<category: 'streaming'>
+	^self isEndDocument
+    ]
+
     collect: tagName peek: aBlock [
 	<category: 'tag-based api'>
 	| result |
@@ -986,11 +991,6 @@ XMLPullParser subclass: XMLGenerativePullParser [
 	^super new
 	    initialize: aParser;
 	    yourself
-    ]
-
-    atEnd [
-	<category: 'streaming'>
-	^self isEndDocument
     ]
 
     current [

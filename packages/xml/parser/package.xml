@@ -2,6 +2,14 @@
   <name>XML-XMLParser</name>
   <namespace>XML</namespace>
 
+  <test>
+    <prereq>XML-PullParser</prereq>
+    <sunit>XML.XMLParserTest</sunit>
+
+    <filein>XMLTests.st</filein>
+    <file>XMLTests.st</file>
+  </test>
+
   <prereq>XML-SAXParser</prereq>
   <prereq>XML-DOM</prereq>
 

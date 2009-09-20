@@ -2,7 +2,7 @@
   <name>XML-PullParser</name>
   <namespace>XML</namespace>
   <prereq>XML-SAXDriver</prereq>
-  <prereq>XML-XMLParser</prereq>
+  <prereq>XML-SAXParser</prereq>
 
   <test>
     <sunit>XML.XMLPullParserTest</sunit>

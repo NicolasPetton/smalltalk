@@ -1,0 +1,20 @@
+<package>
+  <name>XML-Expat</name>
+  <namespace>XML</namespace>
+
+  <test>
+    <prereq>XML-PullParser</prereq>
+    <sunit>XML.ExpatPullParserTest</sunit>
+
+    <filein>ExpatTests.st</filein>
+    <file>ExpatTests.st</file>
+  </test>
+
+  <prereq>XML-SAXParser</prereq>
+  <prereq>XML-PullParser</prereq>
+
+  <module>expat</module>
+
+  <filein>ExpatPullParser.st</filein>
+  <file>ExpatPullParser.st</file>
+</package>
