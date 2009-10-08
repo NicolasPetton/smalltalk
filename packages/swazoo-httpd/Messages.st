@@ -360,7 +360,10 @@ HTTPMessage subclass: HTTPRequest [
 	"how many seconds a connection must be kept alive"
 
 	<category: 'accessing-headers'>
-	^(self headers fieldNamed: 'KEEP-ALIVE' ifNone: [^nil]) value
+	| value |
+	self isKeepAlive ifFalse: [^0].
+	value := (self headers fieldNamed: 'KEEP-ALIVE' ifNone: [^20]) value.
+	^value asInteger
     ]
 
     methodName [
@@ -432,7 +435,7 @@ HTTPMessage subclass: HTTPRequest [
 		    tab;
 		    nextPutAll: ' connection: ';
 		    nextPutAll: self connection].
-	self keepAlive notNil 
+	(self headers includesFieldNamed: 'KEEP-ALIVE')
 	    ifTrue: 
 		[aStream
 		    cr;
