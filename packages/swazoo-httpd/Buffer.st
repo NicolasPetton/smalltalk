@@ -1,13 +1,13 @@
 "======================================================================
 |
-|   Swazoo 2.1 HTTP handling
+|   Swazoo 2.2 HTTP handling
 |
 |
  ======================================================================"
 
 "======================================================================
 |
-| Copyright 2000-2008 the Swazoo team.
+| Copyright 2000-2009 the Swazoo team.
 |
 | This file is part of Swazoo.
 |
@@ -30,7 +30,8 @@
 
 
 ReadWriteStream subclass: SwazooBuffer [
-    
+    | type resize |
+
     <category: 'Swazoo-HTTP'>
     <comment: 'SwazooBuffer is used for efficient buffering of receiving or sending data to TCP socket. Efficiency is achieved with reusing of stream content array instead of initializing it everytime buffer is emptied, as was in previous Swazoo versions. 
 
@@ -43,6 +44,13 @@ SwazooBuffer is a subclass of ReadWriteStream, with additional #clear to empty b
 
 	<category: 'defaults'>
 	^8000	"about 8KB-preamble"
+    ]
+
+    SwazooBuffer class >> largeBufferSize [
+	"size of buffer for large uploads/downloads"
+
+	<category: 'defaults'>
+	^1000000	"about 1MB"
     ]
 
     SwazooBuffer class >> newRead [
@@ -65,9 +73,52 @@ SwazooBuffer is a subclass of ReadWriteStream, with additional #clear to empty b
 	^6
     ]
 
+    initDefaultBuffer [
+	"gst specific - endPtr"
+
+	<category: 'initialize-release'>
+	| size |
+	size := self isWrite
+		ifTrue: [self class defaultBufferSize + self class preambleSize + 2] "possible chunk crlf"
+		ifFalse: [self class defaultBufferSize].
+	collection := ByteArray new: size.
+	endPtr := size. "gst specific"
+	ptr := 1.
+	self isWrite ifTrue: [self initPreamble]
+    ]
+
+    initLargeBuffer [
+	"gst specific - endPtr"
+
+	<category: 'initialize-release'>
+	| size |
+	size := self isWrite
+		ifTrue: [self class largeBufferSize + self class preambleSize + 2] "possible chunk crlf"
+		ifFalse: [self class largeBufferSize].
+	collection := ByteArray new: size.
+	endPtr := size. "Squeak specific"
+	ptr := 1.
+	self isWrite ifTrue: [self initPreamble].
+    ]
+
+    isRead [
+	<category: 'testing'>
+	^type = #read
+    ]
+
+    isWrite [
+	<category: 'testing'>
+	^type = #write
+    ]
+
     atEnd [
 	<category: 'testing'>
 	^super atEnd	"for now"
+    ]
+
+    isEnlarged [
+	<category: 'testing'>
+	^collection size > self class defaultBufferSize
     ]
 
     closeChunkTo: aSocket [
@@ -103,8 +154,8 @@ SwazooBuffer is a subclass of ReadWriteStream, with additional #clear to empty b
 
 	<category: 'mime boundary'>
 	| start |
-	start := ptr.
-	ptr := anIndex.
+	start := ptr - 1.
+	ptr := anIndex + 1.
 	^self copyFrom: start to: anIndex - 1
     ]
 
@@ -127,7 +178,8 @@ SwazooBuffer is a subclass of ReadWriteStream, with additional #clear to empty b
 	"add finishing crlf to buffer"
 	self nextPut: Character cr asInteger.
 	self nextPut: Character lf asInteger.
-	self flushTo: aSocket chunked: true	"flush all at once"
+	self flushTo: aSocket chunked: true.	"flush all at once"
+	self shouldResize ifTrue: [self resizeBuffer; resizeNil]. "enlarge or shrink buffer if requested"
     ]
 
     flushTo: aSocket [
@@ -161,7 +213,7 @@ SwazooBuffer is a subclass of ReadWriteStream, with additional #clear to empty b
 
 	<category: 'mime boundary'>
 	| inx innerInx firstInx |
-	inx := ptr + 1.
+	inx := ptr.
 	[inx <= endPtr] whileTrue: 
 		[innerInx := 1.
 		firstInx := inx.
@@ -206,7 +258,7 @@ SwazooBuffer is a subclass of ReadWriteStream, with additional #clear to empty b
 	"whole buffer?"
 	^(ptr = 1 and: [endPtr = collection size]) 
 	    ifTrue: [collection	"avoid copying for performance"]
-	    ifFalse: [collection copyFrom: ptr to: endPtr - 1]
+	    ifFalse: [collection copyFrom: ptr to: endPtr]
     ]
 
     refillFrom: aSocket [
@@ -271,6 +323,65 @@ SwazooBuffer is a subclass of ReadWriteStream, with additional #clear to empty b
 	endPtr := 0.
 	self initPreamble
     ]
+
+    resizeBuffer [
+	"actually do a buffer resize"
+
+	<category: 'private-resizing'>
+	self shouldEnlarge ifTrue: [^self initLargeBuffer].
+	self shouldShrink ifTrue: [^self initDefaultBuffer].
+    ]
+
+    resizeEnlarge [
+	"request resizing buffer to larger size at the next fill or flush"
+
+	<category: 'private-resizing'>
+	resize := #enlarge
+    ]
+
+    resizeNil [
+	"nil resizing command"
+
+	<category: 'private-resizing'>
+	resize := nil
+    ]
+
+    resizeShrink [
+	"request shrinking buffer to default size at the next fill or flush"
+
+	<category: 'private-resizing'>
+	resize := #shrink
+    ]
+
+    setRead [
+	<category: 'initialize-release'>
+	type := #read
+    ]
+
+    setWrite [
+	<category: 'initialize-release'>
+	type := #write
+    ]
+
+    shouldEnlarge [
+	"should be resized buffer to larger size?"
+
+	<category: 'private-resizing'>
+	^resize = #enlarge
+    ]
+
+    shouldResize [
+	<category: 'private-resizing'>
+	^resize notNil
+    ]
+
+    shouldShrink [
+	"should be resized buffer to default size?"
+
+	<category: 'private-resizing'>
+	^resize = #shrink
+    ]
+
 ]
 
 
