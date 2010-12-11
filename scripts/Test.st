@@ -31,11 +31,14 @@
 Smalltalk arguments isEmpty ifTrue: [ ObjectMemory quit ]!
 PackageLoader fileInPackage: 'SUnit'!
 
-| helpString verbose script suite result quiet |
+| helpString verbose package coverage ceverageResult script suite result quiet |
 quiet := false.
 verbose := false.
 FileStream verbose: false.
+coverage := false.
 script := ''.
+package := ''.
+
 
 helpString :=
 'Usage:
@@ -46,6 +49,7 @@ Options:
     -v --verbose          show passed tests
     -f --file=FILE        load file before running subsequent tests
     -p --package=PACKAGE  load package and run its tests
+    -c --code-coverage    show the code coverage of a namespace
     -I --image-file=FILE  run tests on the specified image file
        --kernel-dir=PATH  use the specified kernel directory
     -h --help             show this message and exit
@@ -55,8 +59,7 @@ Options:
 
 "Parse the command-line arguments."
 Smalltalk
-    arguments: '-h|--help -q|--quiet -v|-V|--verbose -f|--file: -p|--package:
-		-I|--image-file: --kernel-directory: --version'
+    arguments: '-h|--help -q|--quiet -v|-V|--verbose -f|--file: -c|--code-coverage -p|--package: -I|--image-file: --kernel-directory: --version'
     do: [ :opt :arg |
 
     opt = 'help' ifTrue: [
@@ -82,14 +85,17 @@ Smalltalk
 
     opt = 'package' ifTrue: [
 	[
-	    | pkg |
-	    pkg := PackageLoader packageAt: arg.
-	    script := script, ' ', pkg sunitScript.
-	    pkg test notNil ifTrue: [
-		pkg := pkg test.
-	        script := script, ' ', pkg sunitScript ].
-	    pkg fileIn ]
+	    package := PackageLoader packageAt: arg.
+	    script := script, ' ', package sunitScript.
+	    package test notNil ifTrue: [
+		package := package test.
+	        script := script, ' ', package sunitScript ].
+	    package fileIn ]
 	    ifCurtailed: [ ObjectMemory quit: 2 ] ].
+
+    opt = 'code-coverage' ifTrue: [
+	coverage := true
+    ].
 
     opt = 'file' ifTrue: [
 	[ FileStream fileIn: arg ]
@@ -110,7 +116,19 @@ FileStream verbose: false.
 	stderr nextPutAll: 'gst-sunit: you should load SUnit first.'; nl.
 	ObjectMemory quit: 1 ].
 
-result := TestSuitesScripter run: script quiet: quiet verbose: verbose.
-
+coverage 
+    ifTrue: [
+	coverageResult := (CodeCoverageTester on: package namespace)
+	    withCoverageDo: [result := TestSuitesScripter 
+			     run: script 
+			     quiet: quiet 
+			     verbose: verbose]]
+    ifFalse: [
+	    result := TestSuitesScripter 
+		run: script 
+		quiet: quiet 
+		verbose: verbose].
+coverageResult ifNotNil: [
+    coverageResult printResult].
 result runCount = result passedCount
     ifFalse: [ ObjectMemory quit: 1 ]!

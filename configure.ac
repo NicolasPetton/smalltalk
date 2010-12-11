@@ -415,6 +415,7 @@ GST_PACKAGE_PREFIX([packages])
 GST_PACKAGE_DEPENDENCIES([gst-tool$(EXEEXT) gst.im $(WINEWRAPPERDEP)])
 
 GST_PACKAGE_ENABLE([Announcements], [announcements])
+GST_PACKAGE_ENABLE([MethodWrapper], [mth-wrapper])
 GST_PACKAGE_ENABLE([BloxTK], [blox/tk],
    [GST_HAVE_TCLTK],
    [gst_cv_tcltk_libs],

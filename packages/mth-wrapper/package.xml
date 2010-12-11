@@ -1,0 +1,10 @@
+<package>
+  <name>MethodWrapper</name>
+  <namespace>Smalltalk</namespace>
+  
+  <filein>mth-wrapper.st</filein>
+  <filein>mth-example.st</filein>
+
+  <file>mth-wrapper.st</file>
+  <file>mth-example.st</file>
+</package>
