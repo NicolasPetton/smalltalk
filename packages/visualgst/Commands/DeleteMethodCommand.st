@@ -1,10 +1,9 @@
-UndoableCommand subclass: DeleteMethodCommand [
+MethodCommand subclass: DeleteMethodCommand [
 
     execute [
 	<category: 'command'>
 
-        target hasSelectedMethod ifFalse: [ ^ self ].
-        self push: (DeleteMethodUndoCommand delete: target selectedMethodSymbol in: target classOrMetaSelected)
+        (DeleteMethodUndoCommand delete: target state selector in: target state classOrMeta) push
     ]
 ]
 

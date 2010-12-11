@@ -88,7 +88,7 @@ if test x"${enable_snprintfv_convenience-no}" != xno; then
 fi
 AC_SUBST(convenience_libsnprintfv)
 
-AC_ARG_ENABLE(debug,
+AC_ARG_ENABLE(convenience-float-printing,
 [  --enable-convenience-float-printing     enable/disable printing floats
 					   in convenience snprintfv [yes]], ,
 enable_convenience_float_printing=yes)
@@ -103,19 +103,6 @@ else
   LIBSNPRINTFVC_PRINT_FLOATS='-DNO_FLOAT_PRINTING'
 fi
 AC_SUBST(LIBSNPRINTFVC_PRINT_FLOATS)
-
-AC_ARG_ENABLE(debug,
-[  --enable-debug          enable/disable debugging code [no]], ,
-enable_debug=no)
-AC_MSG_CHECKING([whether runtime debugging is wanted])
-AC_MSG_RESULT([$enable_debug])
-if test x$enable_debug = xyes; then
-  CPPFLAGS="-DDEBUG $CPPFLAGS"
-  CFLAGS="-g `echo $CFLAGS|sed 's%-g *%%g'`"
-  if test x$GCC != xyes; then
-    CFLAGS=`echo $CFLAGS|sed 's%-O[[0-9]]* *%%g'`
-  fi
-fi
 
 AM_WITH_DMALLOC
 
@@ -156,6 +143,8 @@ AC_CHECK_TYPE(wchar_t)
 AC_CHECK_TYPE(wint_t)
 AC_CHECK_TYPE(intmax_t)
 AC_TYPE_SIZE_T
+AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(wint_t)
 
 # ----------------------------------------------------------------------
 # Checks for floating-point features
@@ -233,7 +222,7 @@ _EOF_
     else
       echo 'typedef wchar_t snv_wchar_t;' >> $tmpfile
     fi
-    if test x$ac_cv_type_wint_t = xno; then
+    if test x$ac_cv_type_wint_t = xno || test $ac_cv_sizeof_wint_t -lt $ac_cv_sizeof_int; then
       echo 'typedef unsigned int snv_wint_t;' >> $tmpfile
     else
       echo 'typedef wint_t snv_wint_t;' >> $tmpfile
@@ -342,6 +331,8 @@ _EOF_
   ac_cv_type_size_t=$ac_cv_type_size_t
   ac_cv_type_wchar_t=$ac_cv_type_wchar_t
   ac_cv_type_wint_t=$ac_cv_type_wint_t
+  ac_cv_sizeof_wint_t=$ac_cv_sizeof_wint_t
+  ac_cv_sizeof_int=$ac_cv_sizeof_int
   snv_cv_static_inline=$snv_cv_static_inline
   srcdir=$srcdir
 ])

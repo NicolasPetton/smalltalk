@@ -1,9 +1,9 @@
-Command subclass: InspectNamespaceCommand [
+NamespaceCommand subclass: InspectNamespaceCommand [
 
     execute [
 	<category: 'command'>
 
-        GtkInspector openOn: target selectedNamespace
+        GtkInspector openOn: target state namespace
     ]
 ]
 

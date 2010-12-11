@@ -541,10 +541,10 @@ parse_scoped_definition (gst_parser *p, tree_node first_stmt)
 	       && receiver->v_expr.selector == _gst_intern_string ("class"))
  	{
  	  classOOP = parse_class (receiver->v_expr.receiver);
-	  classOrMetaclassOOP = OOP_CLASS (classOOP);
+	  classOrMetaclassOOP = classOOP ? OOP_CLASS (classOOP) : NULL;
  	}	   
       if (classOrMetaclassOOP != NULL) 
- 	{ 
+ 	{
  	  OOP namespace_new = ((gst_class) OOP_TO_OBJ (classOOP))->environment; 
 	  
 	  /* When creating the image, current namespace is not available. */
@@ -585,13 +585,23 @@ parse_eval_definition (gst_parser *p)
   if (stmts && !_gst_had_error)
     {
       if (_gst_regression_testing)
-        printf ("\nExecution begins...\n");
+        {
+          printf ("\nExecution begins...\n");
+	  fflush (stdout);
+	  fflush (stderr);
+        }
 
       _gst_execute_statements (tmps, stmts, UNDECLARED_TEMPORARIES,
 			       _gst_regression_testing);
 
-      if (_gst_regression_testing && !_gst_had_error)
-        printf ("returned value is %O\n", _gst_last_returned_value);
+      if (_gst_regression_testing)
+        {
+          if (!_gst_had_error)
+            printf ("returned value is %O\n", _gst_last_returned_value);
+	  fflush (stdout);
+	  fflush (stderr);
+        }
+
       _gst_had_error = false;
     }
 
@@ -605,37 +615,40 @@ parse_eval_definition (gst_parser *p)
 static mst_Boolean
 parse_and_send_attribute (gst_parser *p, OOP receiverOOP)
 {
-  OOP selectorOOP, args[1];
-  tree_node keyword, value;
+  OOP selectorOOP, *args;
+  tree_node keyword, value, stmt;
+  int i, nb = 0;
 
 #if 0
   printf ("parse attribute\n");
 #endif
   lex_skip_mandatory (p, '<');
   keyword = parse_keyword_expression (p, NULL, EXPR_KEYWORD);
-  if (keyword->v_expr.expression->v_list.next != NULL)
+
+  selectorOOP = _gst_compute_keyword_selector (keyword->v_expr.expression);
+  nb = _gst_selector_num_args (selectorOOP);
+  args = alloca (sizeof (*args) * nb);
+  i = 0;
+  for (stmt = keyword->v_expr.expression; stmt; stmt = stmt->v_list.next)
     {
-      _gst_errorf ("expected one keyword only");
-      _gst_had_error = true;
-    }
-  else
-    {
-      value = keyword->v_expr.expression->v_list.value;
-      selectorOOP = _gst_compute_keyword_selector (keyword->v_expr.expression);
+      value = stmt->v_list.value;
       value = _gst_make_statement_list (&value->location, value);
-      args[0] = _gst_execute_statements (NULL, value,
-					 UNDECLARED_NONE, true);
-
-      if (!args[0])
-	_gst_had_error = true;
-
-      if (!_gst_had_error)
-	_gst_nvmsg_send (receiverOOP, selectorOOP, args, 1);
+      args[i] = _gst_execute_statements (NULL, value, UNDECLARED_NONE, true);
+      if (!args[i])
+        {
+          _gst_had_error = true;
+          break;
+        }
+      i = i + 1;
     }
+
+  if (!_gst_had_error)
+    _gst_nvmsg_send (receiverOOP, selectorOOP, args, i);
 
   lex_skip_mandatory (p, '>');
   return !_gst_had_error;
 }
+
 
 static mst_Boolean
 parse_namespace_definition (gst_parser *p, tree_node first_stmt)
@@ -886,12 +899,17 @@ parse_class_definition (gst_parser *p, OOP classOOP, mst_Boolean extend)
 static void 
 parse_scoped_method (gst_parser *p, OOP classOOP)
 {
-  OOP class;
+  OOP class, classInstanceOOP;
   tree_node class_node;
   mst_Boolean class_method = false;
 
   class_node = parse_variable_primary (p);
   class = parse_class (class_node);
+
+  if (OOP_CLASS (classOOP) == _gst_metaclass_class)
+    classInstanceOOP = METACLASS_INSTANCE (classOOP);
+  else
+    classInstanceOOP = classOOP;
 
   if (token (p, 0) == IDENTIFIER)
     {
@@ -910,13 +928,19 @@ parse_scoped_method (gst_parser *p, OOP classOOP)
   else
     _gst_errorf ("expected `>>'");
   
-  if (!class)
+  if (!class_method && OOP_CLASS (classOOP) == _gst_metaclass_class)
+    {
+      _gst_skip_compilation = true;
+      _gst_errorf ("class method expected inside class block");
+    }
+
+  else if (!class)
     {
       _gst_skip_compilation = true;
       class = classOOP;
     }
 
-  else if (!_gst_class_is_kind_of (classOOP, class))
+  else if (!_gst_class_is_kind_of (classInstanceOOP, class))
     {
       _gst_skip_compilation = true;
       _gst_errorf ("%#O is not %#O or one of its superclasses",

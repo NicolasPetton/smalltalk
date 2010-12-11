@@ -621,11 +621,6 @@ XML.'>
 	    indent: indent.
 	self 
 	    printXmlOn: aStream
-	    collection: self fileIns
-	    tag: 'filein'
-	    indent: indent.
-	self 
-	    printXmlOn: aStream
 	    collection: self libraries asSortedCollection
 	    tag: 'library'
 	    indent: indent.
@@ -649,7 +644,12 @@ XML.'>
 		    space: indent].
 	self 
 	    printXmlOn: aStream
-	    collection: self files
+	    collection: self fileIns
+	    tag: 'filein'
+	    indent: indent.
+	self 
+	    printXmlOn: aStream
+	    collection: (self files copy removeAll: self fileIns ifAbsent: []; yourself)
 	    tag: 'file'
 	    indent: indent.
 	self 
@@ -1355,15 +1355,21 @@ XML.'>
     addFile: aString [
         <category: 'accessing'>
 
-        self files add: aString
+	files isNil ifTrue: [files := OrderedCollection new].
+        files add: aString
     ]
 
     files [
-       "Answer a (modifiable) OrderedCollection of files that are part of
-        the package."
+        "Answer a (modifiable) OrderedCollection of files that are part of
+         the package."
 	<category: 'accessing'>
-	files isNil ifTrue: [files := OrderedCollection new].
-       ^files
+        | f |
+        f := self fileIns copy.
+        f removeAll: self builtFiles ifAbsent: [].
+	files isNil ifFalse: [
+            f removeAll: files ifAbsent: [].
+            f addAll: files ].
+        ^f
     ]
 
     addFileIn: aString [
@@ -1836,6 +1842,10 @@ into a Smalltalk image, correctly handling dependencies.'>
 			    baseDirectories: [
 				{Directory userBase.
 				Directory kernel / '..'}]).
+		root add: (Kernel.PackageDirectory on: self sitePackageFile
+			    baseDirectories: [
+				{Directory userBase.
+				Directory kernel / '../site-packages'}]).
 		root add: (Kernel.PackageDirectory on: self userPackageFile
 			    baseDirectories: [{Directory userBase}]).
 		root add: (Kernel.PackageDirectory on: self localPackageFile
@@ -1889,6 +1899,11 @@ into a Smalltalk image, correctly handling dependencies.'>
     PackageLoader class >> packageFile [
 	<category: 'private - packages file'>
 	^Directory kernel / '../packages.xml'
+    ]
+
+    PackageLoader class >> sitePackageFile [
+	<category: 'private - packages file'>
+	^Directory kernel / '../site-packages/packages.xml'
     ]
 
     PackageLoader class >> userPackageFile [

@@ -7,14 +7,14 @@ dnl Process this file with autoconf to produce a configure script.
 
 dnl 2.63 needed by testsuite, actually
 AC_PREREQ(2.63)
-AC_INIT([GNU Smalltalk], 3.2, help-smalltalk@gnu.org, smalltalk,
+AC_INIT([GNU Smalltalk], 3.2.2, help-smalltalk@gnu.org, smalltalk,
         [http://smalltalk.gnu.org/])
 MAINTAINER="bonzini@gnu.org"
 
 dnl CURRENT:REVISION:AGE means this is the REVISION-th version of
 dnl the CURRENT-th interface; all the interface from CURRENT-AGE
 dnl to CURRENT are supported.
-GST_REVISION(7:2:0)
+GST_REVISION(8:1:1)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux])
 AC_CONFIG_SRCDIR([main.c])
@@ -67,6 +67,7 @@ PKG_PROG_PKG_CONFIG
 AC_PATH_TOOL(WINDRES, windres, no)
 AC_PATH_PROG(INSTALL_INFO, install-info, :, $PATH:/sbin:/usr/sbin)
 AC_PATH_PROG(ZIP, zip, no, $PATH)
+AC_CHECK_PROG(TIMEOUT, timeout, [timeout 60s], [env])
 if test "$ZIP" = no; then
   AC_MSG_ERROR([Please install InfoZIP to use GNU Smalltalk.])
 fi
@@ -91,6 +92,7 @@ with_emacs=yes)
 test "$with_emacs" = no && EMACS=no
 
 AM_PATH_LISPDIR
+GST_PATH_LISPSTARTDIR
 GST_EMACS_PACKAGE(comint)
 
 AM_CONDITIONAL(WITH_EMACS, test "$EMACS" != no)
@@ -105,40 +107,73 @@ AM_MISSING_PROG(AUTOM4TE, autom4te, $missing_dir)
 dnl 
 dnl ------------------------------ SUBDIRS --------------------
 
+PKG_CHECK_MODULES(GNUTLS, gnutls,
+                  [ac_cv_lib_gnutls_gnutls_global_init=yes],
+                  [GST_HAVE_LIB(gnutls, gnutls_global_init)])
+if test "$ac_cv_lib_gnutls_gnutls_global_init" = yes; then
+  AC_DEFINE(HAVE_GNUTLS, 1, [Define to 1 if gnutls is being used])
+fi
+
+dnl Throw all these away in 3.3, and just require the system
+dnl lib{ltdl,ffi,sigsegv}.  Before that, however, we need to
+dnl ensure Fedora has a cross-compiled libffi and libsigsegv.
+
 AC_ARG_WITH(system-libltdl,
 [  --with-system-libltdl[=PATH]  use system libltdl.la (search in PATH if given)],
-[], [with_system_libltdl=no])
+[], [with_system_libltdl=detect])
+
+GST_HAVE_LIB([ltdl], [lt_dlopen])
+if test $with_system_libltdl = detect; then
+  with_system_libltdl=$ac_cv_lib_ltdl_lt_dlopen
+fi
 
 if test $with_system_libltdl = no; then
+  AC_MSG_WARN([using included copy of libltdl])
+  AC_MSG_WARN([this is deprecated and will go away])
+  AC_MSG_WARN([it is suggested to install libltdl])
   AC_LIBOBJ(ltdl)
   AC_CONFIG_LINKS([lib-src/ltdl.h:lib-src/ltdl_.h])
   INCLTDL= LIBLTDL=
 elif test $with_system_libltdl = yes; then
   INCLTDL= LIBLTDL=-lltdl
 else
-  INCLTDL="-I$withval/../include" LIBLTDL="-L$withval -lltdl"
+  INCLTDL="-I$with_system_libltdl/../include"
+  LIBLTDL="-L$with_system_libltdl -lltdl"
 fi
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
 
 AC_ARG_WITH(system-libffi,
 [  --with-system-libffi[=PATH]   use system libffi.la (search in PATH if given)],
-[], [with_system_libffi=no])
+[], [with_system_libffi=detect])
 
+PKG_CHECK_MODULES(LIBFFI, libffi,
+                  [ac_cv_lib_libffi_ffi_prep_cif=yes],
+                  [GST_HAVE_LIB(libffi, ffi_prep_cif)])
+if test $with_system_libffi = detect; then
+  with_system_libffi=$ac_cv_lib_libffi_ffi_prep_cif
+fi
 if test $with_system_libffi = no; then
+  AC_MSG_WARN([using included copy of libffi])
+  AC_MSG_WARN([this is deprecated and will go away])
+  AC_MSG_WARN([it is suggested to install libffi])
   AC_CONFIG_SUBDIRS(libffi)
   INCFFI='-I$(top_srcdir)/libffi/include -I$(top_builddir)/libffi/include'
   LIBFFI='$(top_builddir)/libffi/libffi.la'
 elif test $with_system_libffi = yes; then
-  PKG_CHECK_MODULES(FFI, libffi,
-    [ INCFFI="$FFI_CFLAGS" LIBFFI="$FFI_LIBS" ],
-    [ INCFFI= LIBFFI=-lffi ]
-  )
+  INCFFI=$LIBFFI_CFLAGS
+  LIBFFI=${LIBFFI_LIBS:-'-lffi'}
 else
-  INCFFI="-I$withval/../include" LIBFFI="-L$withval -lffi"
+  INCFFI="-I$with_system_libffi/../include"
+  LIBFFI="-L$with_system_libffi -lffi"
 fi
+case $host in
+  *-*-darwin[[912]]* ) LIBFFI_EXECUTABLE_LDFLAGS=-Wl,-allow_stack_execute ;;
+  *) LIBFFI_EXECUTABLE_LDFLAGS= ;;
+esac
 AC_SUBST(INCFFI)
 AC_SUBST(LIBFFI)
+AC_SUBST(LIBFFI_EXECUTABLE_LDFLAGS)
 
 case $ac_configure_args in
   *--enable-subdir) ;;
@@ -152,7 +187,7 @@ AC_ARG_ENABLE(generational-gc,
 [case $host in
 	*-k*bsd-gnu | \
         *-*-cygwin* | *-*-mingw* | \
-	ia64-*-* | alpha*-*-* )
+	ia64-*-* | alpha*-*-* | sparc*-*-* )
 	  enable_generational_gc=no ;;
         *)
 	  enable_generational_gc=yes ;;
@@ -160,20 +195,38 @@ esac])
 
 AC_ARG_WITH(system-libsigsegv,
 [  --with-system-libsigsegv[=PATH]   use system libsigsegv.la likewise],
-[], [with_system_libsigsegv=no])
+[], [with_system_libsigsegv=detect])
+
+GST_HAVE_LIB([sigsegv], [sigsegv_install_handler])
+if test $with_system_libsigsegv = detect; then
+  with_system_libsigsegv=$ac_cv_lib_sigsegv_sigsegv_install_handler
+fi
 
 if test $enable_generational_gc = no; then
   INCSIGSEGV= LIBSIGSEGV=
 else
   AC_DEFINE(HAVE_SIGSEGV_H, 1, [Define to 1 if libsigsegv is being used])
   if test $with_system_libsigsegv = no; then
+    case $host in
+      x86_64-apple-darwin*)
+        AC_MSG_ERROR(dnl
+[a pre-installed libsigsegv is required on 64-bit Darwin.  To
+configure: error: proceed without it, use the --disable-generational-gc
+configure: error: option for configure.])
+        ;;
+      *)
+       AC_MSG_WARN([using included copy of libsigsegv])
+       AC_MSG_WARN([this is deprecated and will go away])
+       AC_MSG_WARN([it is suggested to install libsigsegv])
+    esac
     AC_CONFIG_SUBDIRS(sigsegv)
     INCSIGSEGV='-I$(top_srcdir)/sigsegv/src -I$(top_builddir)/sigsegv/src'
-    LIBSIGSEGV='$(top_builddir)/sigsegv/src/libsigsegv.la'
+    LIBSIGSEGV='$(top_builddir)/sigsegv/src/libsigsegv_convenience.la'
   elif test $with_system_libsigsegv = yes; then
     INCSIGSEGV= LIBSIGSEGV=-lsigsegv
   else
-    INCSIGSEGV="-I$withval/../include" LIBSIGSEGV="-L$withval -lsigsegv"
+    INCSIGSEGV="-I$with_system_libsigsegv/../include"
+    LIBSIGSEGV="-L$with_system_libsigsegv -lsigsegv"
   fi
 fi
 AC_SUBST(INCSIGSEGV)
@@ -210,10 +263,11 @@ AC_C_RESTRICT
 
 dnl Test for broken solaris include file.  Should be moved to gnulib maybe?
 AC_MSG_CHECKING([for broken sys/avl.h])
-AC_PREPROC_IFELSE([#include <sys/avl.h>
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([#include <sys/avl.h>
   #ifndef _AVL_H
-  would be useless anyway :-(
-  #endif], [
+  would be useless anyway
+  #endif
+])], [
   AC_MSG_RESULT(yes)
   AC_DEFINE(_AVL_H, 1,
     [Define to 1 if, like Solaris, your system has a sys/avl.h header that
@@ -249,8 +303,6 @@ AC_CHECK_SIZEOF(wchar_t, , [[
 AC_CHECK_SIZEOF(OOP, , [[
 typedef void *OOP;]])
 
-GST_LIBC_SO_NAME
-
 AC_LIBTOOL_DLOPEN
 AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
@@ -263,8 +315,9 @@ case "$GCC:`$CC -v 2>&1 | sed -n '[s/^gcc version \([0-9.]*\).*/\1/p]'`" in
      AC_MSG_ERROR([GNU Smalltalk requires GCC 3.3 or later.]) ;;
 esac
 
-case $host_cpu in
-   i*86) LIBGST_CFLAGS='-fomit-frame-pointer' ;;
+case '$host_cpu: $CFLAGS ' in
+   i*86:*' -pg '*) ;;
+   i*86:*) LIBGST_CFLAGS='-fomit-frame-pointer' ;;
    *) ;;
 esac
 AC_SUBST(LIBGST_CFLAGS)
@@ -284,10 +337,6 @@ dnl ------------------------------- C LIBRARY -----------------
 AC_TYPE_SIGNAL
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
-AC_CACHE_CHECK([the value of NSIG], ac_cv_lib_NSIG, [
-  AC_COMPUTE_INT([ac_cv_lib_NSIG], [NSIG], [#include <signal.h>])])
-AC_DEFINE_UNQUOTED([STDLIB_NSIG], [$ac_cv_lib_NSIG],
-		   [The value given by libc to NSIG])
 
 AC_HEADER_ASSERT
 AC_CHECK_HEADERS_ONCE(stdint.h inttypes.h unistd.h poll.h sys/ioctl.h \
@@ -357,12 +406,15 @@ dnl ------------------------- OTHER LIBRARIES -------------------
 
 { echo; echo "${term_bold}Auxiliary libraries:${term_norm}"; } >& AS_MESSAGE_FD
 
+GST_LIBC_SO_NAME
 GST_HAVE_GMP
 GST_HAVE_READLINE
 
+GST_PACKAGE_ALLOW_DISABLING
 GST_PACKAGE_PREFIX([packages])
 GST_PACKAGE_DEPENDENCIES([gst-tool$(EXEEXT) gst.im $(WINEWRAPPERDEP)])
 
+GST_PACKAGE_ENABLE([Announcements], [announcements])
 GST_PACKAGE_ENABLE([BloxTK], [blox/tk],
    [GST_HAVE_TCLTK],
    [gst_cv_tcltk_libs],
@@ -421,6 +473,18 @@ GST_PACKAGE_ENABLE([GTK], [gtk], [
         ])
       ])
     ], [], gobject)
+    if test $enable_gtk = yes; then
+      ac_save_LIBS=$LIBS
+      ac_save_CFLAGS=$CFLAGS
+      LIBS="$LIBS $GLIB_LIBS"
+      CFLAGS="$CFLAGS $GLIB_CFLAGS"
+      AC_CHECK_FUNCS([g_poll])
+      if test $ac_cv_func_g_poll = no; then
+        AC_DEFINE([g_poll], [poll], [Define to poll if your glib does not provide g_poll.])
+      fi
+      LIBS=$ac_save_LIBS
+      CFLAGS=$ac_save_CFLAGS
+    fi
   fi],
   [enable_gtk gst_cv_cairo],
   [Makefile], [gst-gtk.la])
@@ -453,7 +517,7 @@ GST_PACKAGE_ENABLE([NCurses],
   [ncurses],
   [GST_HAVE_LIB(ncurses, initscr)],
   [ac_cv_lib_ncurses_initscr])
-GST_PACKAGE_ENABLE([NetClients], [net])
+GST_PACKAGE_ENABLE([NetClients], [net], [], [], [Makefile])
 GST_PACKAGE_ENABLE([DhbNumericalMethods], [numerics])
 GST_PACKAGE_ENABLE([OpenGL], [opengl],
    [GST_HAVE_OPENGL],
@@ -470,6 +534,19 @@ GST_PACKAGE_ENABLE([LibSDL], [sdl/libsdl],
     *-framework,Cocoa* | *"-framework Cocoa"*) gst_cv_sdl_uses_cocoa=yes ;;
     *) gst_cv_sdl_uses_cocoa=no ;;
   esac
+
+  save_CFLAGS=$CFLAGS
+  save_LIBS=$LIBS
+  CFLAGS="$CFLAGS $SDL_CFLAGS"
+  LIBS="$LIBS $SDL_LIBS"
+  AC_LINK_IFELSE([AC_LANG_SOURCE([
+      #include <SDL.h>
+      #include <SDL_main.h>
+      int main(int argc, char **argv) { SDL_Init(0); return 0; }])],
+    [], [gst_cv_sdl=no])
+
+  LIBS=$save_LIBS
+  CFLAGS=$save_CFLAGS
 
   # We do SDLmain's job on our own, and mingw32 is linked automatically
   # into the DLL.  If we do not do this, libtool refuses to create a DLL
@@ -518,8 +595,9 @@ GST_PACKAGE_ENABLE([XML-DOM], [xml/dom])
 GST_PACKAGE_ENABLE([XML-ParserTests], [xml/tests])
 GST_PACKAGE_ENABLE([XML-PullParser], [xml/pullparser])
 GST_PACKAGE_ENABLE([XML-Expat], [xml/expat],
-  [AC_CHECK_HEADER([expat.h])],
-  [ac_cv_header_expat_h],
+  [AC_CHECK_HEADER([expat.h])
+   GST_HAVE_LIB(expat, XML_ParserCreateNS)],
+  [ac_cv_header_expat_h ac_cv_lib_expat_XML_ParserCreateNS],
   [Makefile], [expat.la])
 GST_PACKAGE_ENABLE([XML-XMLParser], [xml/parser])
 GST_PACKAGE_ENABLE([XML-SAXDriver], [xml/saxdriver])
@@ -528,8 +606,9 @@ GST_PACKAGE_ENABLE([XPath], [xml/xpath])
 GST_PACKAGE_ENABLE([XSL], [xml/xsl])
 GST_PACKAGE_ENABLE([ZLib],
   [zlib],
-  [AC_CHECK_HEADER([zlib.h])],
-  [ac_cv_header_zlib_h],
+  [AC_CHECK_HEADER([zlib.h])
+   GST_HAVE_LIB(z, inflate)],
+  [ac_cv_header_zlib_h ac_cv_lib_z_inflate],
   [Makefile], [zlib.la])
 
 if test "$enable_gtk" = blox; then
@@ -805,7 +884,6 @@ AC_CONFIG_FILES(gnu-smalltalk.pc)
 AC_CONFIG_FILES(gst-config, chmod +x gst-config)
 AC_CONFIG_FILES(tests/gst, chmod +x tests/gst)
 AC_CONFIG_FILES(tests/atlocal)
-AC_CONFIG_FILES(libc.la)
 
 dnl Master Makefile
 AC_CONFIG_FILES(Makefile)

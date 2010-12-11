@@ -1,16 +1,12 @@
 GtkConcreteWidget subclass: GtkImageWidget [
-    | imageTree model searchEntry |
+
+    | imageTree image model searchEntry |
+
 
     initialize [
 	<category: 'initialization'>
 
 	self mainWidget: self buildMainWidget
-    ]
-
-    model [
-        <category: 'accessing'>
-
-        ^ model ifNil: [ model := GtkImageModel current ]
     ]
 
     buildMainWidget [
@@ -26,7 +22,7 @@ GtkConcreteWidget subclass: GtkImageWidget [
         <category: 'user interface'>
 
         searchEntry := GTK.GtkEntry new
-			    connectSignal: 'activate' to: self selector: #searchValidate userData: nil;
+			    connectSignal: 'activate' to: self selector: #searchValidate;
 			    yourself.
         ^ (GTK.GtkHBox new: true spacing: 3)
             add: (GTK.GtkLabel new: 'Class or method :');
@@ -37,11 +33,12 @@ GtkConcreteWidget subclass: GtkImageWidget [
     buildClassAndMethodList [
         <category: 'user interface'>
 
-        imageTree := GTK.GtkTreeView newWithSortedTextColumn: self model gtkModel title: 'Methods and Classes'.
-        self model isSorted ifFalse: [
-            (imageTree getColumn: 0) signalEmitByName: 'clicked' args: {}.
-            self model isSorted: true ].
+        imageTree := (GTK.GtkTreeView createListWithModel: {{GtkColumnTextType title: 'Methods and Classes'}}).
         imageTree setSearchEntry: searchEntry.
+        [ (model := GtkListModel on: imageTree getModel)
+					item: (image := GtkImage new);
+                                        contentsBlock: [ :each | {each displayString} ];
+					refresh ] fork.
         ^ GTK.GtkScrolledWindow withChild: imageTree
     ]
 
@@ -49,13 +46,13 @@ GtkConcreteWidget subclass: GtkImageWidget [
         <category: 'events'>
 
         imageTree getSelection
-            connectSignal: 'changed' to: anObject selector: aSelector userData: nil
+            connectSignal: 'changed' to: anObject selector: aSelector
     ]
 
     whenTextChangedSend: aSelector to: anObject [
 	<category: 'events'>
 
-        searchEntry connectSignal: 'activate' to: anObject selector: aSelector userData: nil
+        searchEntry connectSignal: 'activate' to: anObject selector: aSelector
     ]
 
     grabFocus [
@@ -73,16 +70,29 @@ GtkConcreteWidget subclass: GtkImageWidget [
     searchValidate [
 	<category: 'search entry events'>
 
-        searchEntry getText isEmpty ifTrue: [ ^ imageTree setModel: (model := GtkImageModel current) gtkModel ].
-        imageTree setModel: (model := (GtkImageModel current matchRegex: searchEntry getText)) gtkModel
+	searchEntry getText isEmpty 
+		    ifTrue: [ model item: image ]
+		    ifFalse: [ model item: (image matchRegex: searchEntry getText) ].
+	model refresh
+    ]
+
+    hasSelection [
+	<category: 'accessing'>
+
+	^ imageTree hasSelectedItem
     ]
 
     selection [
 	<category: 'accessing'>
 
-        | iter string |
-        (iter := imageTree selectedIter) ifNil: [ ^ self error: 'Nothing is selected' ].
-        ^ (self model gtkModel at: iter) first
+        self hasSelection ifFalse: [ ^ self error: 'Nothing is selected' ].
+        ^ imageTree selection
+    ]
+
+    matchSelector: aSymbol [
+	<category: 'matching'>
+
+	^ image matchSelector: aSymbol
     ]
 ]
 

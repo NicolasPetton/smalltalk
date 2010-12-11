@@ -1,3 +1,31 @@
+2010-12-05  Paolo Bonzini  <bonzini@gnu.org>
+
+	* lib-src/socketx.h: Provide O_NONBLOCK.
+
+2010-10-31  Paolo Bonzini  <bonzini@gnu.org>
+
+	* lib-src/lock.c: Remove PTHREAD_IN_USE stuff.
+	* lib-src/lock.h: Remove PTHREAD_IN_USE stuff.
+
+2010-10-31  Aleksej Saushev  <asau@inbox.ru>
+
+	* lib-src/mathl.h: Add missing prototypes.
+
+2010-10-04  Paolo Bonzini  <bonzini@gnu.org>
+
+	* lib-src/qsort.c: Obsolete, remove.
+
+2010-07-18  Paolo Bonzini  <bonzini@gnu.org>
+
+	* lib-src/avltrees.c: Rewrite avl_next.  Fixes case where root has
+	no left child, reported by Ildar Mulyukov.
+	* lib-src/rbtrees.c: Rewrite rb_next.  Likewise.
+
+2010-05-20  Paolo Bonzini  <bonzini@gnu.org>
+
+	* lib-src/mkdtemp.c: Fix typo.  Reported by Rick Flower.
+	* lib-src/mkstemp.c: Likewise.
+
 2010-02-25  Paolo Bonzini  <bonzini@gnu.org>
 
 	* lib-src/lrintf.c: New.

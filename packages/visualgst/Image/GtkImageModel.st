@@ -1,36 +1,20 @@
-Object subclass: GtkImageModel [
-    GtkImageModel class [ | current | ]
+Object subclass: GtkImage [
 
-    GtkImageModel class >> release [
-	<category: 'accessing'>
+    GtkImage class >> new [
+	<category: 'instance creation'>
 
-	current := nil.
-        super release
+	^ self basicNew
+		initialize;
+		yourself
     ]
 
-    GtkImageModel class >> current [
-	<category: 'accessing'>
-
-	^ current ifNil: [ current := (self new)
-					initialize;
-					yourself ]
-    ]
-
-    GtkImageModel class >> currentModel [
-        <category: 'accessing'>
-
-        ^ self current model
-    ]
-
-    | finderDic isSorted model |
+    | finderDic |
 
     initialize [
 	<category: 'initialize-release'>
 
 	finderDic := Dictionary new.
-	isSorted := false.
 	self
-	    gtkModel;
 	    registerNotifier;
             buildNamespaceModel;
             buildClassModel;
@@ -40,32 +24,13 @@ Object subclass: GtkImageModel [
     registerNotifier [
 	<category: 'initialize-release'>
 
-	(VisualGST uniqueInstance systemChangeNotifier)
+	(GtkLauncher uniqueInstance systemChangeNotifier)
 	    notify: self ofSystemChangesOfItem: #namespace change: #Added using: #'addNamespaceEvent:';
 	    notify: self ofSystemChangesOfItem: #namespace change: #Removed using: #'removeNamespaceEvent:';
 	    notify: self ofSystemChangesOfItem: #class change: #Added using: #'addClassEvent:';
 	    notify: self ofSystemChangesOfItem: #class change: #Removed using: #'removeClassEvent:';
 	    notify: self ofSystemChangesOfItem: #method change: #Added using: #'addMethodEvent:';
 	    notify: self ofSystemChangesOfItem: #method change: #Removed using: #'removeMethodEvent:'
-    ]
-
-    isSorted [
-	<category: 'testing'>
-
-	^ isSorted
-    ]
-
-    isSorted: aBoolean [
-	<category: 'accessing'>
-
-	isSorted := aBoolean
-    ]
-
-    gtkModel [
-	<category: 'accessing'>
-
-	^ model ifNil: [
-	    model := GTK.GtkListStore new: 1 varargs: {GTK.GValue gTypeString} ]
     ]
 
     buildNamespaceModel [
@@ -78,10 +43,11 @@ Object subclass: GtkImageModel [
         <category: 'model builder'>
 
 	| namespace |
-        finderDic at: aNamespace displayString ifAbsentPut: [ self appendToModel: aNamespace displayString. Dictionary new ].
+        finderDic at: aNamespace displayString ifAbsentPut: [ Dictionary new ].
 	self at: aNamespace displayString addToFinder: (NamespaceFinder on: aNamespace).
 
-        aNamespace subspacesDo: [ :each | self appendNamespace: each ]
+        aNamespace subspacesDo: [ :each | self appendNamespace: each ].
+	Processor activeProcess yield
     ]
 
     buildClassModel [
@@ -89,8 +55,9 @@ Object subclass: GtkImageModel [
 
         | class string |
         Class allSubclassesDo: [ :each |
-            string := ((each displayString) substrings: $.) last.
-            finderDic at: string ifAbsentPut: [ self appendToModel: string. Dictionary new ].
+	    Processor activeProcess yield.
+            string := each asClass name asString, ' '.
+            finderDic at: string ifAbsentPut: [ Dictionary new ].
 	    self at: string addToFinder: (ClassFinder on: each) ]
     ]
 
@@ -98,10 +65,11 @@ Object subclass: GtkImageModel [
         <category: 'model builder'>
 
 	| method |
-        [ CompiledMethod allInstancesDo: [ :each | | selector |
+        CompiledMethod allInstancesDo: [ :each | | selector |
+	    Processor activeProcess yield.
             selector := each selector asString.
-            finderDic at: selector ifAbsentPut: [ self appendToModel: selector. Dictionary new ].
-	    self at: selector addToFinder: (MethodFinder on: each methodClass with: each selector) ] ] forkAt: Processor lowIOPriority
+            finderDic at: selector ifAbsentPut: [ Dictionary new ].
+	    self at: selector addToFinder: (MethodFinder on: each methodClass with: each selector) ]
     ]
 
     at: aSelector addToFinder: aFinderObject [
@@ -110,12 +78,6 @@ Object subclass: GtkImageModel [
 	(finderDic at: aSelector)
                 at: aFinderObject displayString
                 put: aFinderObject
-    ]
-
-    appendToModel: aString [
-        <category: 'model builder'>
-
-        self gtkModel insertWithValues: nil position: 0 varargs: {0. aString. -1}
     ]
 
     matchSelector: aSymbol [
@@ -132,22 +94,27 @@ Object subclass: GtkImageModel [
 	finderDic keysAndValuesDo: [ :key :value |
 	    (key matchRegex: aString) ifTrue: [ result at: key put: value ] ].
 	^ (self class new)
-	    finderTreeAsModel: result;
+	    image: result;
+	    registerNotifier;
 	    yourself
     ]
 
-    finderTreeAsModel: aDictionary [
+    image: aDictionary [
+	<category:'accessing'>
+
+	finderDic := aDictionary
+    ]
+
+    do: aBlock [
 	<category: 'model'>
 
-	finderDic := aDictionary.
-	finderDic keysDo: [ :each |
-	    self appendToModel: each ]
+	(finderDic keys asArray sort: [ :a :b | a <= b ]) do: aBlock
     ]
-    
+
     addNamespaceEvent: anEvent [
 	<category: 'events'>
 
-        finderDic at: anEvent item displayString ifAbsentPut: [ self appendToModel: anEvent item displayString. Dictionary new ].
+        finderDic at: anEvent item displayString ifAbsentPut: [ Dictionary new ].
 	self at: anEvent item displayString addToFinder: (NamespaceFinder on: anEvent item).
     ]
 
@@ -160,7 +127,7 @@ Object subclass: GtkImageModel [
 
 	| string |
         string := ((anEvent item displayString) substrings: $.) last.
-        finderDic at: string ifAbsentPut: [ self appendToModel: string. Dictionary new ].
+        finderDic at: string ifAbsentPut: [ Dictionary new ].
 	self at: string addToFinder: (ClassFinder on: anEvent item) 
     ]
 

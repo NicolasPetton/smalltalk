@@ -488,7 +488,7 @@ NetProtocolInterpreter subclass: IMAPProtocolInterpreter [
 	<category: 'connection'>
 	super connect.
 	self resetCommandSequence.
-	responseStream := connectionStream.
+	responseStream := self connectionStream.
 	commandSequencer reset.
 	self getResponse
     ]
@@ -496,11 +496,6 @@ NetProtocolInterpreter subclass: IMAPProtocolInterpreter [
     defaultCommandPrefix [
 	<category: 'constants and defaults'>
 	^'imapv4_'
-    ]
-
-    defaultPortNumber [
-	<category: 'constants and defaults'>
-	^143
     ]
 
     defaultResponseClass [
@@ -709,6 +704,11 @@ NetClient subclass: IMAPClient [
     <comment: nil>
     <category: 'NetClients-IMAP'>
 
+    IMAPClient class >> defaultPortNumber [
+	<category: 'constants'>
+	^143
+    ]
+
     protocolInterpreter [
 	<category: 'accessing'>
 	^IMAPProtocolInterpreter
@@ -725,11 +725,10 @@ NetClient subclass: IMAPClient [
 	state client: self
     ]
 
-    connectToHost: aString port: aNumber [
+    connected [
 	"Establish a connection to the host <aString>."
 
 	<category: 'connection'>
-	super connectToHost: aString port: aNumber.
 	self state: IMAPNonAuthenticatedState new
     ]
 

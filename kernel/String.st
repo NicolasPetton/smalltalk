@@ -338,8 +338,17 @@ or assumed to be the system default.'>
 	self checkIndexableBounds: anIndex put: value
     ]
 
+    asCData [
+	"Allocate memory with malloc for a NULL-terminated copy of the
+         receiver, and return a pointer to it as a CChar."
+
+	<category: 'CObject'>
+	^self asCData: CCharType
+    ]
+
     asCData: aCType [
-	"Convert the receiver to a CObject with the given type"
+	"Allocate memory with malloc for a NULL-terminated copy of the
+        receiver, and return a pointer to it as a CObject of the given type."
 
 	<category: 'built ins'>
 	<primitive: VMpr_String_asCData>

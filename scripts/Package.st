@@ -201,7 +201,7 @@ Kernel.PackageContainer subclass: PackageCheckout [
 
 	mainPackage := addedPackages first.
 	MainPackage use: mainPackage during: [
-	    mainPackage prerequisites printNl do: [ :each || file |
+	    mainPackage prerequisites do: [ :each || file |
 	        ((each startsWith: mainPackage name, '-') and: [
 		    (file := mainPackage baseDirectories first
 		        / (each copyFrom: mainPackage name size + 2)
@@ -259,7 +259,7 @@ PackageCheckout subclass: GitPackageCheckout [
 		url host = '' ifTrue: [ realUrl := realUrl path ].
 	        command := 'git clone --depth 1 %1 .' % {realUrl} ]
 	    ifTrue: [
-		command := 'git fetch' ].
+		command := 'git pull' ].
 
         ('cd %1 && ' % { self checkoutDirectory }, command) displayNl.
         saveDir := Directory working.
@@ -328,7 +328,7 @@ Kernel.PackageDirectories subclass: PackageFiles [
 			found := true.
 		        each url = urlString ifTrue: [
 			    ^self error: 'infinite loop in package.xml urls' ].
-			self addURL: (NetClients.URL fromString: each url) ]].
+			self addURL: each url ]].
 		found ifTrue: [^self].
 		^self error: 'url element not found in remote XML file' ].
 
@@ -482,7 +482,7 @@ Object subclass: Command [
 
     isValidOption: aString [
 	^#('srcdir' 'target-directory' 'destdir' 'image-file'
-	   'dry-run' 'kernel-directory') includes: aString
+	   'dry-run' 'kernel-directory' 'verbose') includes: aString
     ]
 
     isOption: aString [ ^options includesKey: aString ]
@@ -1100,6 +1100,7 @@ Common suboptions:
         --target-directory DIR  install the files in DIR (unused for --dist)
     -I, --image-file=FILE       load into the specified image
         --kernel-dir=PATH       use the specified kernel directory
+    -v, --verbose               print extra information while processing
 
 --install suboptions:
 	--test                  run unit tests after merging
@@ -1147,7 +1148,7 @@ The default target directory is ', Directory image name, '
                 --dist -t|--target-directory: --list-files: --list-packages
                 --prepare --srcdir: --distdir|--destdir: -n|--dry-run
 		--all-files --vpath --copy -I|--image-file: --kernel-directory:
-		--update|--download --version'
+		--update|--download --version -v|-V|--verbose'
 
             do: [ :opt :arg || modeClass |
 	        opt = 'help' ifTrue: [
@@ -1156,6 +1157,10 @@ The default target directory is ', Directory image name, '
 	        opt = 'version' ifTrue: [
 		    ('gst-package - %1' % {Smalltalk version}) displayNl.
 		    ObjectMemory quit: 0 ].
+
+		opt = 'verbose' ifTrue: [
+		    OutputVerbosity := 1.
+		    FileStream verbose: true ].
 
 		modeClass := self class classForMode: opt.
 		modeClass notNil ifTrue: [ self mode: modeClass ].

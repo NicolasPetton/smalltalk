@@ -42,12 +42,17 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 '>
     <category: 'NetClients-NNTP'>
 
+    NNTPClient class >> defaultPortNumber [
+	<category: 'constants'>
+	^119
+    ]
+
     NNTPClient class >> exampleHelpOn: host [
 	"self exampleHelpOn: 'localhost'."
 
 	<category: 'examples'>
 	| client answer |
-	client := NNTPProtocolInterpreter connectToHost: host.
+	client := NNTPClient connectToHost: host.
 	
 	[answer := client help.
 	client logout] ensure: [client close].
@@ -59,7 +64,7 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 
 	<category: 'examples'>
 	| subjects client |
-	client := NNTPProtocolInterpreter host: host.
+	client := NNTPClient connectToHost: host.
 	
 	[| range |
 	range := client activeArticlesInGroup: groupString.
@@ -176,10 +181,9 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 	^self bodyAt: anInteger printString into: aStream
     ]
 
-    connectToHost: host port: port [
+    connected [
 	<category: 'accessing'>
 	currentGroup := nil.
-	super connectToHost: host port: port
     ]
 
     group: groupString [
@@ -372,6 +376,11 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 	    to: to
 	    into: aStream
     ]
+
+    liveAcrossSnapshot [
+	<category: 'private-attributes'>
+	^true
+    ]
 ]
 
 ]
@@ -386,11 +395,6 @@ NetProtocolInterpreter subclass: NNTPProtocolInterpreter [
 Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 '>
     <category: 'NetClients-NNTP'>
-
-    NNTPProtocolInterpreter class >> defaultPortNumber [
-	<category: 'api'>
-	^119
-    ]
 
     connect [
 	<category: 'connection'>
@@ -753,17 +757,12 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 	^119
     ]
 
-    liveAcrossSnapshot [
-	<category: 'private-attributes'>
-	^true
-    ]
-
     nextPutAll: aString [
 	<category: 'stream accessing'>
 	| retryCount |
 	aString isEmpty ifTrue: [^self].
 	retryCount := 0.
-	[connectionStream nextPutAll: (self encode: aString)] on: Error
+	[self connectionStream nextPutAll: (self encode: aString)] on: Error
 	    do: 
 		[:ex | 
 		(retryCount := retryCount + 1) > 1 

@@ -33,7 +33,7 @@
 
 
 Object subclass: Delay [
-    | resumptionTime delayDuration |
+    | resumptionTime delayDuration delaySemaphore waitingProcess |
     
     <category: 'Kernel-Processes'>
     <comment: 'I am the ultimate agent for frustration in the world.  I cause things to wait 
@@ -43,8 +43,7 @@ that process goes to sleep for the interval specified when the instance was
 created.'>
 
     MutexSem := nil.
-    ActiveDelay := nil.
-    DelayEvent := nil.
+    DelayRequestor := nil.
     Queue := nil.
     DelayProcess := nil.
     IdleProcess := nil.
@@ -71,32 +70,41 @@ created.'>
         ^self new initUntilMilliseconds: millisecondCount
     ]
 
-    Delay class >> handleDelayEvent [
+    Delay class >> activeDelay [
+        "Return the delay at the head of the queue."
+	<category: 'timer process'>
+
+        Queue isEmpty ifTrue: [^nil].
+        ^Queue last
+    ]
+
+    Delay class >> handleDelayRequestor [
 	"Handle a timer event; which can be either:
-	 - a schedule or unschedule request (DelayEvent notNil)
+	 - a schedule or unschedule request (DelayRequestor notNil)
 	 - a timer signal (not explicitly specified)
 	 We check for timer expiry every time we get a signal."
 
 	<category: 'timer process'>
 
-	| nextTick |
+	| nextTick activeDelay |
 
 	"Wait until there is work to do."
 	TimeoutSem wait.
 
 	"Process any schedule/unschedule requests"
-	DelayEvent isNil ifFalse: 
+	DelayRequestor isNil ifFalse: 
 		["Schedule the given delay"
-		DelayEvent value isNil
-		    ifTrue: [ self unscheduleDelay: DelayEvent key ]
-		    ifFalse: [ self scheduleDelay: DelayEvent key on: DelayEvent value ].
-		DelayEvent := nil].
+		DelayRequestor isActive
+		    ifTrue: [ self scheduleDelay: DelayRequestor ]
+		    ifFalse: [ self unscheduleDelay: DelayRequestor ].
+		DelayRequestor := nil].
 
 	"Signal any expired delays"
-	[ActiveDelay notNil and: [Time millisecondClockValue >= ActiveDelay key resumptionTime]] 
+	[activeDelay := self activeDelay.
+        activeDelay notNil and: [Time millisecondClockValue >= activeDelay resumptionTime]] 
 	    whileTrue: 
-		[ActiveDelay value signal.
-		self unscheduleDelay: ActiveDelay key].
+		[activeDelay signal.
+		self unscheduleDelay: activeDelay].
 
 	"Since we have processed all outstanding requests, reset the timing semaphore so
 	 that only new work will wake us up again. Do this RIGHT BEFORE setting the next
@@ -104,8 +112,8 @@ created.'>
 	TimeoutSem initialize.
 
 	"And signal when the next request is due."
-	ActiveDelay isNil ifFalse: [
-	    nextTick := ActiveDelay key resumptionTime - Time millisecondClockValue.
+	activeDelay isNil ifFalse: [
+	    nextTick := activeDelay resumptionTime - Time millisecondClockValue.
 	    Processor signal: TimeoutSem atMilliseconds: nextTick].
     ]
 
@@ -113,38 +121,31 @@ created.'>
 	"Run the timer event loop."
 
 	<category: 'timer process'>
-	[[self handleDelayEvent] repeat]
+	[[self handleDelayRequestor] repeat]
 	    ifCurtailed: 
 		[DelayProcess := nil.
 		Delay startDelayLoop]
     ]
 
-    Delay class >> scheduleDelay: aDelay on: aSemaphore [
+    Delay class >> scheduleDelay: aDelay [
 	"Private - Schedule this Delay.  Run in the timer process, which
 	 is the only one that manipulates Queue."
 
 	<category: 'timer process'>
-	ActiveDelay isNil
-	    ifTrue: [ActiveDelay := aDelay->aSemaphore]
-	    ifFalse: 
-		[aDelay resumptionTime < ActiveDelay key resumptionTime 
-		    ifTrue: 
-			[Queue add: ActiveDelay.
-			ActiveDelay := aDelay->aSemaphore]
-		    ifFalse: [Queue add: aDelay->aSemaphore]]
+	Queue add: aDelay
     ]
 
     Delay class >> unscheduleDelay: aDelay [
-	"Private. Unschedule this Delay.  Run in the timer process, which
+	"Private - Unschedule this Delay.  Run in the timer process, which
 	 is the only one that manipulates Queue."
 
 	<category: 'timer process'>
-	ActiveDelay key == aDelay 
-	    ifTrue: 
-		[Queue isEmpty 
-		    ifTrue: [ActiveDelay := nil]
-		    ifFalse: [ActiveDelay := Queue removeFirst]]
-	    ifFalse: [Queue removeAllSuchThat: [ :k | k key == aDelay ]].
+        | activeDelay |
+	aDelay reset.
+	activeDelay := self activeDelay.
+	activeDelay isNil ifTrue: [^self].
+	activeDelay == aDelay ifTrue: [^Queue removeLast].
+	^Queue remove: aDelay ifAbsent: [].
     ]
 
     Delay class >> startDelayLoop [
@@ -156,13 +157,13 @@ created.'>
 	DelayProcess isNil ifFalse: [ DelayProcess terminate ].
 
 	"This semaphore does not protect Queue (which is only manipulated within
-	 one process for thread-safety, but rather DelayEvent)."
+	 one process for thread-safety, but rather DelayRequestor)."
 	MutexSem := Semaphore forMutualExclusion.
-	DelayEvent := nil.
+	DelayRequestor := nil.
 
 	"A sorted collection of delay->semaphore associations."
 	Queue := SortedCollection
-		    sortBlock: [:d1 :d2 | d1 key resumptionTime <= d2 key resumptionTime].
+		    sortBlock: [:d1 :d2 | d1 resumptionTime >= d2 resumptionTime].
 	TimeoutSem := Semaphore new.
 	DelayProcess := [self runDelayProcess] forkAt: Processor timingPriority.
 	TimeoutSem signal	"get going"
@@ -193,30 +194,59 @@ created.'>
         ^resumptionTime hash bitXor: delayDuration hash
     ]
 
-    schedule [
-	"Private - Schedule this Delay, but return immediately rather than
-	 waiting.  Returns a semaphore will be signalled when its delay
-	 duration has elapsed."
+    notifyChange [
+	"Private - Notify the Delay process of a change in the active/inactive
+         state of this Delay.  Return immediately."
 
 	<category: 'private'>
-	| delaySemaphore |
-	delaySemaphore := Semaphore new.
-	resumptionTime isNil
-	    ifTrue: [ resumptionTime := Time millisecondClockValue + delayDuration ].
 	MutexSem critical: 
-		[DelayEvent := self -> delaySemaphore.
+		[DelayRequestor := self.
 		TimeoutSem signal].
-	^delaySemaphore
     ]
 
-    unschedule [
-	"Private - Unschedule this Delay. Do nothing if it wasn't scheduled."
-
+    signal [
+        "Wake the process that is waiting on this delay."
 	<category: 'private'>
-	| done |
-	MutexSem critical: 
-		[DelayEvent := self -> nil.
-		TimeoutSem signal]
+        | sema process |
+        waitingProcess isNil
+            ifTrue: [
+	        sema := delaySemaphore.
+	        delaySemaphore := nil.
+                sema isNil ifFalse: [sema signal]]
+            ifFalse: [
+                process := waitingProcess.
+                waitingProcess := nil.
+                process isNil ifFalse: [process suspend; resume]].
+    ]
+
+    isActive [
+        "Answer whether this Delay is being waited on."
+	<category: 'testing'>
+        ^delaySemaphore notNil or: [waitingProcess notNil]
+    ]
+
+    timedWaitOn: aSemaphore [
+	"Schedule this Delay and wait on it. The current process will be
+	 suspended for the amount of time specified when this Delay was created,
+         or until aSemaphore is signaled."
+
+	<category: 'delaying'>
+        | expired |
+        self isActive ifTrue: [self error: 'delay already in use'].
+	[self start.
+        waitingProcess := Processor activeProcess.
+        self notifyChange.
+
+        "This can already signal the semaphore!"
+        waitingProcess == nil ifFalse: [expired := aSemaphore wait]] ensure: [
+            waitingProcess == nil ifFalse: [waitingProcess := nil. self notifyChange]].
+
+        "#reset will have been called by #unscheduleDelay:, either through
+         the second call to #notifyChange, or because the timeout fired.
+         If the suspend/resume pair in #signal was executed, expired will
+         be nil, otherwise it will be the semaphore.  This is guaranteed
+         by the VM.  Use this fact to return the correct value."
+        ^expired == nil
     ]
 
     wait [
@@ -224,13 +254,60 @@ created.'>
 	 suspended for the amount of time specified when this Delay was created."
 
 	<category: 'delaying'>
-	[[self schedule wait] ifCurtailed: [self unschedule]]
-	    ensure: [delayDuration isNil ifFalse: [resumptionTime := nil]].
+        self isActive ifTrue: [self error: 'delay already in use'].
+	[self start.
+        delaySemaphore := Semaphore new.
+        self notifyChange.
+
+        "This can already signal the semaphore!"
+        delaySemaphore == nil ifFalse: [delaySemaphore wait]] ensure: [
+            delaySemaphore == nil ifFalse: [delaySemaphore := nil. self notifyChange]].
+
+        "#reset will have been called by #unscheduleDelay:, either through
+         the second call to #notifyChange, or because the timeout fired."
+    ]
+
+    start [
+        "Prepare to wait on the delay."
+	<category: 'private'>
+	resumptionTime isNil
+	    ifTrue: [ resumptionTime := Time millisecondClockValue + delayDuration ].
+    ]
+
+    reset [
+        "Prepare to wait again on the delay."
+	<category: 'private'>
+	delayDuration isNil ifFalse: [resumptionTime := nil].
     ]
 
     resumptionTime [
 	<category: 'accessing'>
 	^resumptionTime
+    ]
+
+    isAbsolute [
+	"Answer whether the receiver waits until an absolute time on the
+         millisecond clock."
+	<category: 'accessing'>
+	^delayDuration isNil
+    ]
+
+    asAbsolute [
+	"Answer a delay that waits until the current delay's resumptionTime,
+         or delayDuration milliseconds from now if that would be nil.  May
+         answer the receiver if it is already waiting until an absolute time."
+	<category: 'accessing'>
+	self isAbsolute ifTrue: [ ^self ].
+        ^Delay untilMilliseconds: Time millisecondClockValue + delayDuration.
+    ]
+
+    postCopy [
+        "Adjust the current delay so that it behaves as if it had just been
+         created."
+	<category: 'copying'>
+        self isAbsolute ifFalse: [ resumptionTime := nil ].
+        delaySemaphore := nil.
+        waitingProcess := nil
     ]
 
     delayDuration [

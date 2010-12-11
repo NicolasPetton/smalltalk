@@ -1,10 +1,30 @@
 BrowserState subclass: NamespaceState [
 
+    | classCategory |
+
     printOn: aStream [
 	<category: 'printing'>
 
 	aStream
 	    print: self namespace
+    ]
+
+    hasSelectedNamespace [
+        <category: 'testing'>
+
+        ^ true
+    ]
+
+    classCategory: aCategory [
+	<category: 'accessing'>
+
+	classCategory := aCategory
+    ]
+
+    classCategory [
+	<category: 'accessing'>
+
+	^ classCategory
     ]
 
     namespace [
@@ -13,10 +33,12 @@ BrowserState subclass: NamespaceState [
 	^ state
     ]
 
-    saveSource [
-	<category: 'events'>
-
-	browser acceptClassDefinitionForState: self
+    updateBrowser: aGtkClassBrowserWidget [
+        <category: 'events'>
+   
+	aGtkClassBrowserWidget 
+			updateNamespaceOfClass: self namespace classCategory: self classCategory;
+			displayNamespaceSource: self namespace
     ]
 ]
 

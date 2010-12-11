@@ -315,23 +315,13 @@ myConnect (int fd, struct sockaddr *sockaddr, int len)
   ioctlsocket (sock, FIONBIO, &iMode);
 
 #elif defined F_GETFL
-  int oldflags = fcntl (sock, F_GETFL, NULL);
-
 #ifndef O_NONBLOCK             
-#ifdef O_NDELAY
-#define O_NONBLOCK O_NDELAY
-#else
-#ifdef FNDELAY
-#define O_NONBLOCK FNDELAY
-#else
 #warning Non-blocking I/O could not be enabled
-#define O_NONBLOCK 0
-#endif
-#endif
-#endif
-
+#else
+  int oldflags = fcntl (sock, F_GETFL, NULL);
   if (!(oldflags & O_NONBLOCK))
     fcntl (sock, F_SETFL, oldflags | O_NONBLOCK);
+#endif
 #endif
   
   fix_sockaddr (sockaddr);
@@ -347,6 +337,10 @@ myAccept (int fd, struct sockaddr *addr, socklen_t *addrlen)
 {
   SOCKET fh = SOCKET_ERROR;
   int new_fd;
+
+  /* Parameters to system calls are not guaranteed to generate a SIGSEGV
+     and for this reason we must touch them manually.  */
+  _gst_grey_oop_range (addr, *addrlen);
 
 #if defined SOCK_CLOEXEC && defined HAVE_ACCEPT4 && !defined __MSVCRT__
   if (have_sock_cloexec >= 0)
@@ -378,18 +372,30 @@ myBind (int fd, struct sockaddr *addr, socklen_t addrlen)
 static int
 myGetpeername (int fd, struct sockaddr *addr, socklen_t *addrlen)
 {
+  /* Parameters to system calls are not guaranteed to generate a SIGSEGV
+     and for this reason we must touch them manually.  */
+  _gst_grey_oop_range (addr, *addrlen);
+
   return getpeername (FD_TO_SOCKET (fd), addr, addrlen);
 }
 
 static int
 myGetsockname (int fd, struct sockaddr *addr, socklen_t *addrlen)
 {
+  /* Parameters to system calls are not guaranteed to generate a SIGSEGV
+     and for this reason we must touch them manually.  */
+  _gst_grey_oop_range (addr, *addrlen);
+
   return getsockname (FD_TO_SOCKET (fd), addr, addrlen);
 }
 
 static int
 myGetsockopt (int fd, int level, int optname, char *optval, socklen_t *optlen)
 {
+  /* Parameters to system calls are not guaranteed to generate a SIGSEGV
+     and for this reason we must touch them manually.  */
+  _gst_grey_oop_range (optval, *optlen);
+
   return getsockopt (FD_TO_SOCKET (fd), level, optname, optval, optlen);
 }
 
@@ -407,7 +413,14 @@ myRecvfrom (int fd, char *buf, int len, int flags, struct sockaddr *from,
 	    socklen_t *fromlen)
 {
   int frombufsize = *fromlen;
-  int r = recvfrom (FD_TO_SOCKET (fd), buf, len, flags, from, fromlen);
+  int r;
+
+  /* Parameters to system calls are not guaranteed to generate a SIGSEGV
+     and for this reason we must touch them manually.  */
+  _gst_grey_oop_range (buf, len);
+  _gst_grey_oop_range (from, *fromlen);
+
+  r = recvfrom (FD_TO_SOCKET (fd), buf, len, flags, from, fromlen);
 
   /* Winsock recvfrom() only returns a valid 'from' when the socket is
      connectionless.  POSIX gives a valid 'from' for all types of sockets.  */

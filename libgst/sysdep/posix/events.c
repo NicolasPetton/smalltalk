@@ -59,21 +59,20 @@
 #ifdef HAVE_UTIME_H
 # include <utime.h>
 #endif
-
 #ifdef HAVE_SYS_TIMES_H
 # include <sys/times.h>
 #endif
-
 #ifdef HAVE_SYS_IOCTL_H
 # include <sys/ioctl.h>
 #endif
-
 #ifdef HAVE_TERMIOS_H
 # include <termios.h>
 #endif
-
 #ifdef HAVE_STROPTS_H
-#include <stropts.h>
+# include <stropts.h>
+#endif
+#ifdef USE_POSIX_THREADS
+# include <pthread.h>
 #endif
 
 static SigHandler sigio_handler = SIG_IGN;
@@ -359,7 +358,7 @@ void
 _gst_pause (void)
 {
 #ifdef USE_POSIX_THREADS
-  waiting_thread = pthread_in_use () ? pthread_self () : 0;
+  waiting_thread = pthread_self ();
 #endif
   _gst_disable_interrupts (false);
   if (!_gst_have_pending_async_calls ())
@@ -381,9 +380,7 @@ _gst_wakeup (void)
 {
 #ifdef USE_POSIX_THREADS
   __sync_synchronize ();
-  if (pthread_in_use ()
-      && waiting_thread
-      && pthread_self () != waiting_thread)
+  if (waiting_thread && pthread_self () != waiting_thread)
     pthread_kill (waiting_thread, SIGUSR2);
 #endif
 }

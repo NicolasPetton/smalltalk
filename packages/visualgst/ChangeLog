@@ -1,3 +1,59 @@
+2010-10-18  Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* many many files: Add missing files.
+
+2010-10-17  Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* many many files: Sync with upstream.
+
+2010-09-25  Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* many many files: Sync with upstream.
+
+2010-08-02  Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* GtkClassBrowser.st: Add missing #hasChanged.
+	* GtkLauncher.st: Add missing #currentWidgetOfBrowser.
+
+2010-08-02  Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* GtkBrowsingTool.st: Whitespace change.
+	* Inspector/GtkInspector.st: Inherit from GtkBrowsingTool.
+	Implement abstract methods, remove those now in the superclass.
+	* Inspector/GtkInspectorBrowserWidget.st: Add #hasChanged,
+	some whitespace changes.
+
+2010-06-23  Paolo Bonzini  <bonzini@gnu.org>
+            Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* many many files: Sync with upstream.
+	
+2010-06-14  Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* Category/ClassCategory.st, CategoryState.st,
+	Commands/AddCategoryCommand.st, Commands/AddMethodCommand.st,
+	Commands/ClassCommand.st, Commands/Command.st,
+	Commands/RenameCategoryCommand.st, GtkCategorizedNamespaceWidget.st,
+	GtkCategoryWidget.st, GtkClassBrowserWidget.st,
+	GtkClassHierarchyWidget.st, GtkLauncher.st, MethodState.st,
+	Undo/AddMethodUndoCommand.st, package.xml: Sync with upstream.
+
+2010-06-12  Paolo Bonzini  <bonzini@gnu.org>
+
+	* many many files: Sync with upstream.
+
+2010-06-07  Paolo Bonzini  <bonzini@gnu.org>
+
+	* Category/AbstractNamespace.st: Do not add an instance variable.
+	* Extensions.st: Add #getFocusChild, fixes accelerators on find widget.
+	* GtkBrowsingTool.st: Do not tie Control-A to an accelerator.
+	* Inspector/GtkInspector.st: Do not tie Control-A to an accelerator.
+	* VisualGST.st: Do not tie Control-A to an accelerator.
+
+2010-06-07  Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* many many files: Sync with upstream.
+
 2010-05-02  Paolo Bonzini  <bonzini@gnu.org>
 
 	* packages/visualgst/Debugger/GtkDebugger.st: Fix misspelling.

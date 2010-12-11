@@ -1051,7 +1051,7 @@ Stream subclass: RBScanner [
 	 c) parsed nothing and are sitting on a - sign."
 	currentCharacter == $. 
 	    ifTrue: 
-		[stream peek isDigit 
+		[(self isDigit: stream peek base: base)
 		    ifTrue: 
 			[self step.
 			self 
@@ -1436,6 +1436,7 @@ RBParser subclass: RBBracketedMethodParser [
 methods.'>
 
     skipToken: tokenValue [
+        currentToken isValue ifFalse: [^false].
         (currentToken value = tokenValue)
             ifTrue: [self step. ^true]
             ifFalse: [^false]
@@ -1458,26 +1459,4 @@ methods.'>
 
 Eval [
     RBScanner initialize
-]
-
-
-RBParser subclass: RBBracketedMethodParser [
-    skipToken: tokenValue [
-        (currentToken value = tokenValue)
-            ifTrue: [self step. ^true]
-            ifFalse: [^false]
-    ]
-
-    skipExpectedToken: tokenValue [
-        (self skipToken: tokenValue)
-            ifFalse: [self parserError: ('expected ' , tokenValue asSymbol)]
-    ]
-
-    parseMethodInto: methodNode [
-        <category: 'private-parsing'>
-        self skipExpectedToken: $[.
-	super parseMethodInto: methodNode.
-        self skipExpectedToken: $].
-        ^methodNode
-    ]
 ]

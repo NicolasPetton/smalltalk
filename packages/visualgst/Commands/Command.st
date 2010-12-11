@@ -6,19 +6,25 @@ Object subclass: Command [
 	<category: 'instance creation'>
 
 	^ self new
-	    execute;
+	    validAndExecute
+    ]
+
+    Command class >> target: anObject [
+        <category: 'instance creation'>
+
+	^ self new
+	    target: anObject;
 	    yourself
     ]
 
     Command class >> on: anObject [
 	<category: 'instance creation'>
     
-	^ (self new)
-	    target: anObject;
-	    execute;
-	    yourself
+	^ (self target: anObject)
+		    validAndExecute
     ]
 
+    
     target: anObject [
 	<category: 'accessing'>
 
@@ -29,6 +35,21 @@ Object subclass: Command [
 	<category: 'command'>
 
 	self subclassResponisibility 
+    ]
+
+    valid [
+	<category: 'command'>
+
+	^ true
+    ]
+
+    validAndExecute [
+	<category: 'command'>
+
+        self valid ifFalse: [ ^ self ].
+        ^ self
+            execute;
+            yourself
     ]
 ]
 

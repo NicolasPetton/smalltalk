@@ -122,7 +122,7 @@ _gst_heap_create (PTR address, int size)
      values for.  */
 
   hdp = &mtemp;
-  memzero ((char *) hdp, sizeof (mtemp));
+  memset ((char *) hdp, 0, sizeof (mtemp));
   hdp->areasize = size;
   hdp->base = _gst_osmem_reserve (address, size);
 
@@ -218,6 +218,18 @@ heap_sbrk_internal (struct heap * hdp,
     }
   else if (hdp->breakval + size > hdp->top)
     {
+      if (hdp->breakval - hdp->base + size > hdp->areasize)
+        {
+          if (hdp->breakval - hdp->base == hdp->areasize);
+            {
+              /* FIXME: a library should never exit!  */
+              fprintf (stderr, "gst: out of memory allocating %d bytes\n",
+                       size);
+              exit (1);
+            }
+          size = hdp->areasize - (hdp->breakval - hdp->base);
+        }
+
       moveto = PAGE_ALIGN (hdp->breakval + size);
       mapbytes = moveto - hdp->top;
       mapto = _gst_osmem_commit (hdp->top, mapbytes);

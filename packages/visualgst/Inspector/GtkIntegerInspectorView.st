@@ -1,13 +1,8 @@
 GtkObjectInspectorView subclass: GtkIntegerInspectorView [
 
-    refreshModel [
-	<category: 'events'>
- 
-	super refreshModel. 
-	self 
-	    appendVariable: 'hexadecimal';
-	    appendVariable: 'octal';
-	    appendVariable: 'binary'
+    do: aBlock [
+	super do: aBlock.
+        #('hexadecimal' 'octal' 'binary') do: aBlock
     ]
 
     selectedValue: aString [

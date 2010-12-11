@@ -6,6 +6,7 @@ Smalltalk.Class extend [
 	<category: 'accessing instances and variables'>
 
 	| oldCategory |
+	category = aString ifTrue: [ ^ self ].
 	oldCategory := category.
 	category := aString.
 	VisualGST.SystemChangeNotifier root class: self recategorizedFrom: oldCategory to: category

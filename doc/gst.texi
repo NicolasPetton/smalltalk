@@ -1866,16 +1866,23 @@ they need other goodies to be loaded first.
 
 The packaging system is implemented by a Smalltalk class,
 @code{PackageLoader}, which looks for information about packages in
-the XML file named (guess what) @file{packages.xml}, in one of three
-places:
+various places:
 @itemize
 @item the kernel directory's parent directory; this is where
   an installed @file{packages.xml} resides, in a system-wide data
   directory such as @file{/usr/local/share/smalltalk};
+@item the above directory's @file{site-packages} subdirectory, for
+  example @file{/usr/local/share/smalltalk/site-packages};
 @item in the file @file{.st/packages.xml}, hosting per-user packages;
 @item finally, there can be a @file{packages.xml} in the same directory
   as the current image.
 @end itemize
+
+Each of this directories can contain package descriptions in an
+XML file named (guess what) @file{packages.xml}, as well as standalone
+packages in files named @file{*.star} (short for @cite{Smalltalk
+archive}).  Later in this section you will find information about
+@command{gst-package}, a program that helps you create @file{.star} files.
 
 There are two ways to load something using the packaging system. The
 first way is to use the PackageLoader's @code{fileInPackage:} and
@@ -1991,18 +1998,8 @@ this:
   <filein>Table.st</filein>
   <filein>TableColumnInfo.st</filein>
 
-  <!-- @i{@r{The @code{file} tag identifies files that
+  <!-- @i{@r{The @code{file} tag identifies extra files that
        compose this package's distribution.}} -->
-  <file>SQLite.st</file>
-  <file>Connection.st</file>
-  <file>ResultSet.st</file>
-  <file>Statement.st</file>
-  <file>Row.st</file>
-  <file>ColumnInfo.st</file>
-  <file>Table.st</file>
-  <file>TableColumnInfo.st</file>
-
-  <!-- @i{@r{Test files or extra files can also be included.}} -->
   <file>SQLiteTests.st</file>
   <file>ChangeLog</file>
 </package>
@@ -2060,7 +2057,8 @@ To install your package, you only have to do
 
 @command{gst-package} is a Smalltalk script which will create
 a @file{.star} archive in the current image directory, with the
-files specified in the @code{file} tags.  By default the package is
+files specified in the @code{file}, @code{filein} and
+@code{built-file} tags.  By default the package is
 placed in the system-wide package directory; you can use the option
 @option{--target-directory} to create the @file{.star} file elsewhere.
 
@@ -2073,11 +2071,12 @@ will be downloaded if necessary, and copied to the target directory;
 @item
 a URL to a @file{package.xml} file.  The @code{url} tag in the file
 will be used to find a source code repository (@command{git} or
-@command{svn}) or to download a @file{package.xml} file.
+@command{svn}) or as a redirect to another @file{package.xml} file.
 @end itemize
 
-There is a short form for specifying @file{package.xml} file on
-@gst{}'s web site; the following two commands are equivalent:
+@noindent
+There is also a short form for specifying @file{package.xml} file on
+@gst{}'s web site, so that the following two commands are equivalent:
 
 @example
     gst-package http://smalltalk.gnu.org/project/Iliad/package.xml
@@ -2230,9 +2229,8 @@ insights into the @gst{} virtual machine.
 
 The second is the automatic documentation extractor.  @code{gst-doc} is able
 to create documentation even if the library cannot be loaded (for example,
-if loading it requires a running X server).  To do so
-it uses @file{packages/stinst/parser/STLoader.st} and
-@file{packages/stinst/parser/STLoaderObjs.st} to load and interpret
+if loading it requires a running X server).  To do so it uses
+@code{STClassLoader} from the @file{Parser} package to load and interpret
 Smalltalk source code, creating objects for the classes and methods being
 read in; then, polymorphism allows one to treat these exactly like usual
 classes.
@@ -3123,11 +3121,6 @@ you will have to add the name of the module in a package file
    <sunit>MD5Test SHA1Test</sunit>
    <filein>mdtests.st</filein>
   </test>
-
-  <file>digest.st</file>
-  <file>md5.st</file>
-  <file>sha1.st</file>
-  <file>mdtests.st</file>
 </package>
 @end example
 
@@ -3206,7 +3199,7 @@ However, there is no special significance to which class receives the
 method; it could have just as well been Float, but it might look kind of
 strange to see:
 @example
-   1701.0 system: 'mail help-smalltalk@@gnu.org' !
+   1701.0 system: 'mail help-smalltalk@@g@:nu.org' !
 @end example
 
 The various keyword arguments are described below.
@@ -3314,6 +3307,11 @@ passed as @code{wchar_t}
 
 @item string      
 passed as @code{char *}
+
+@item byteArrayOut   
+passed as @code{char *}.  The contents are expected to be overwritten
+with a new C string, and copied back to the object that was passed
+on return from the C function
 
 @item stringOut   
 passed as @code{char *}, the contents are expected to be overwritten
@@ -4334,24 +4332,13 @@ methods to the object but, rather, to use:
 
 The @code{sync} in the name of this function distinguishes it from
 @code{asyncSignal}, in that it can only be called from a procedure
-already scheduled with @code{asyncCall}, or from a call-in.  It
-cannot be called from other threads than the Smalltalk thread.
+already scheduled with @code{asyncCall}.  It cannot be called from
+a call-in, or from other threads than the interpreter thread.
 @end deftypefun
 
 @deftypefun void syncWait (OOP)
-This functions accepts an OOP for a @code{Semaphore} object and puts the
-current process to sleep, unless the semaphore has excess signals on it.
-Since a Smalltalk call-in is not an atomic operation, the correct way to
-signal a semaphore is not to send the @code{wait} method to the object
-but, rather, to use:
-
-@example
-    syncWait(semaphoreOOP)
-@end example
-
-As for @code{syncSignal}, this function can only be called from a
-procedure already scheduled with @code{asyncCall}, or from a call-in.
-It cannot be called from other threads than the Smalltalk thread.
+This function is present for backwards-compatibility only and
+should not be used.
 @end deftypefun
 
 @deftypefun void showBacktrace (FILE *)

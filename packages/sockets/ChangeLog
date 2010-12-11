@@ -1,3 +1,49 @@
+2010-12-04  Paolo Bonzini  <bonzini@gnu.org>
+
+	* package.xml: Remove now superfluous <file> tags.
+
+2010-09-27  Paolo Bonzini <bonzini@gnu.org>
+
+	* Sockets.st: Return false for #isPeerAlive after a zero-byte read
+	from the socket.  Reported by Holger Hans Peter Freyther.
+
+2010-06-14  Paolo Bonzini <bonzini@gnu.org>
+
+	* Sockets.st: Do not close a datagram socket upon timeout.
+	Reported by Holger Hans Peter Freyther.
+
+2010-06-13  Paolo Bonzini <bonzini@gnu.org>
+
+	* AbstractSocketImpl.st: Check the return value of recvfrom and
+	sendto for errors.
+
+2010-06-13  Paolo Bonzini <bonzini@gnu.org>
+
+	* SocketAddress.st: Avoid infinite mutual recursion between
+	#fromSockAddr:port: and #extractFromSockAddr:port:.  The bug is
+	elsewhere, but this isn't a bad idea anyway.
+
+2010-06-12  Holger Hans Peter Freyther  <zecke@selfish.org>
+
+	* Sockets.st: Make DatagramSocket local: string port: int
+	work. Resolve the ipAddress to localAddr early on, use the
+	localAddr instead of ipAddress to determine the addressClass
+	and afterwards fallback to localhost in case localAddr was nil.
+
+2010-06-12  Holger Hans Peter Freyther  <zecke@selfish.org>
+
+	* Sockets.st: Add AbstractSocket class>>#addressFromString to
+	parse a string into a SocketAddress and use it inside the
+	ServerSocket and DatagramSocket class.
+
+2010-06-12  Holger Hans Peter Freyther  <zecke@selfish.org>
+
+	* Datagram.st: Add #dataSize, #dataSize: and #size.
+	* AbstractSocketImpl.st: Call Datagram>>#dataSize: from the
+	#receive:datagram selector with the bytes read, use
+	Datagram>>#size in the #send:to:port selector to only send
+	a limited amount of bytes from the Datagram>>#data.
+
 2010-03-27  Paolo Bonzini <bonzini@gnu.org>
 
 	* AbstractSocketImpl.st: Do not check errno unless a system call

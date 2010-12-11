@@ -16,7 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 # Automake requirements
-AUTOMAKE_OPTIONS = gnu 1.8
+AUTOMAKE_OPTIONS = gnu 1.11 dist-xz
 ACLOCAL_AMFLAGS = -I build-aux
 
 PACKAGE=smalltalk
@@ -59,7 +59,10 @@ dist_noinst_SCRIPTS = build-aux/texi2dvi build-aux/texi2html \
 pkgconfigdir = $(libdir)/pkgconfig
 nodist_pkgconfig_DATA = gnu-smalltalk.pc
 
+if NEED_LIBC_LA
 module_DATA = libc.la
+endif
+
 noinst_DATA = gst.im
 dist_noinst_DATA += smalltalk-mode-init.el.in gst-mode.el.in \
 	.gdbinit scripts/Finish.st gsticon.ico packages/xml/ChangeLog \
@@ -68,8 +71,6 @@ dist_noinst_DATA += smalltalk-mode-init.el.in gst-mode.el.in \
 bin_SCRIPTS = gst-config
 DISTCLEANFILES = termbold termnorm pkgrules.tmp
 CLEANFILES = gst.im $(nodist_lisp_LISP) $(nodist_lispstart_LISP)
-
-lispstartdir = $(lispdir)/site-start.d
 
 if WITH_EMACS
 dist_lisp_LISP = smalltalk-mode.el
@@ -112,7 +113,7 @@ bin_PROGRAMS = gst
 gst_SOURCES = main.c
 gst_LDADD = libgst/libgst.la lib-src/library.la @ICON@
 gst_DEPENDENCIES = libgst/libgst.la lib-src/library.la @ICON@
-gst_LDFLAGS = -export-dynamic $(RELOC_LDFLAGS)
+gst_LDFLAGS = -export-dynamic $(RELOC_LDFLAGS) $(LIBFFI_EXECUTABLE_LDFLAGS)
 
 if ENABLE_DISASSEMBLER
 gst_LDADD += opcode/libdisass.la
@@ -126,7 +127,7 @@ noinst_PROGRAMS = gst-tool
 gst_tool_SOURCES = gst-tool.c
 gst_tool_LDADD = libgst/libgst.la lib-src/library.la @ICON@
 gst_tool_DEPENDENCIES = libgst/libgst.la lib-src/library.la @ICON@
-gst_tool_LDFLAGS = -export-dynamic $(RELOC_LDFLAGS)
+gst_tool_LDFLAGS = -export-dynamic $(RELOC_LDFLAGS) $(LIBFFI_EXECUTABLE_LDFLAGS)
 
 # Used to call the Unix zip from Wine
 EXTRA_PROGRAMS = winewrapper

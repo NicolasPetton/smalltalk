@@ -67,8 +67,7 @@ benchmark
     flags _ Array new: size.
     self timesRepeat: [
 	count _ 0.
-	1 to: size do:
-	    [:i | flags at: i put: true ].
+	flags atAllPut: true.
 	1 to: size do:
 	    [:i | (flags at: i) ifTrue:
 		[prime _ i+1.
@@ -80,4 +79,4 @@ benchmark
     ^count
 ! !
 
-Transcript showCr: 10 tinyBenchmarks!
+Transcript showCr: 12 tinyBenchmarks!

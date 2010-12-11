@@ -1,3 +1,40 @@
+2010-12-04  Paolo Bonzini  <bonzini@gnu.org>
+
+	* package.xml: Remove now superfluous <file> tags.
+
+2010-11-21  Paolo Bonzini  <bonzini@gnu.org>
+
+	* funcs.awk: More bugfixes and hacks for recent glib.
+
+2010-10-28  Paolo Bonzini  <bonzini@gnu.org>
+
+	* MoreFuncs.st: Fix 64-bit cleanliness bug in #oopType.  Reported
+	by Mathieu Suen.
+
+2010-10-15  Paolo Bonzini  <bonzini@gnu.org>
+
+	* GtkImpl.st: Return nil when gtk_tree_model_get_iter returns FALSE.
+
+2010-10-15  Paolo Bonzini  <bonzini@gnu.org>
+
+	* funcs.awk: Improve conversion for functions that have a single
+	argument before the variadic ones, and have that argument merged
+	with the "...".
+
+2010-06-23  Paolo Bonzini  <bonzini@gnu.org>
+
+	* GtkImpl.st: Add GtkAlignment class>>#new and GObject class>>#new.
+	* MoreStructs.st: Add GdkColor.
+
+2010-06-12  Paolo Bonzini  <bonzini@gnu.org>
+
+	* GtkImpl.st: Remove method now that's now inlined in VisualGST.
+
+2010-05-28  Paolo Bonzini  <bonzini@gnu.org>
+
+	* gst-gtk.c: Work around missing g_poll in some versions of glib
+	for Mac OS X.
+
 2010-04-13  Paolo Bonzini  <bonzini@gnu.org>
 
 	* gst-gtk.c: Fix Windows deadlock by polling every 20 ms the VM

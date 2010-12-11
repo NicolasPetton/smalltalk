@@ -1,15 +1,19 @@
-UndoableCommand subclass: AddClassCommand [
+NamespaceCommand subclass: AddClassCommand [
 
     execute [
 	<category: 'command'>
 
 	| dlg superclass |
-	target hasSelectedClass
-            ifTrue: [ superclass := target selectedClass ]
-            ifFalse: [ superclass := Object ].
+	superclass := target state hasSelectedClass
+            ifTrue: [ target state classOrMeta ]
+            ifFalse: [ Object ].
         dlg := GtkEntryDialog title: 'Add a class' text: 'Name of the new class'.
-        dlg hasPressedOk ifTrue: [
-            self push: (AddClassUndoCommand add: dlg result asSymbol to: target selectedNamespace withSuperclass: superclass) ]
+        dlg hasPressedOk: [
+            (AddClassUndoCommand
+                add: dlg result asSymbol
+                to: target state namespace
+                classCategory: target state classCategory
+                withSuperclass: superclass) push ]
     ]
 ]
 

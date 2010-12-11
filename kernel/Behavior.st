@@ -84,7 +84,7 @@ method dictionary, and iterating over the class hierarchy.'>
          in instVarNames"
 
         <category: 'instance variables'>
-        | variableArray oldInstVarNames |
+        | variableArray oldInstVarNames oldSize removed changed added |
         variableArray := self parseInstanceVariableString: instVarNames.
         variableArray := self subclassInstVarNames, variableArray.
         oldInstVarNames := self allInstVarNames.
@@ -94,13 +94,17 @@ method dictionary, and iterating over the class hierarchy.'>
         variableArray = oldInstVarNames ifTrue: [^self].
         self updateInstanceVars: variableArray shape: self shape.
 
-        "If no variable has been removed, no need to recompile"
-        (oldInstVarNames allSatisfy: [:each | variableArray includes: each])
-            ifTrue: [^self].
-        Transcript
-            nextPutAll: 'Recompiling classes...';
-            nl.
-        self compileAll.
+        "If this class or the subclasses' variables changed, need to recompile."
+        oldSize := oldInstVarNames size.
+        changed := variableArray size < oldSize or: [
+            (variableArray first: oldSize) ~= (oldInstVarNames first: oldSize)].
+        removed := oldInstVarNames anySatisfy: [:each |
+            (variableArray includes: each) not].
+        added := variableArray anySatisfy: [:each |
+            (oldInstVarNames includes: each) not].
+
+        changed | removed | added ifFalse: [^self].
+        changed | removed ifTrue: [self compileAll].
         self compileAllSubclasses
     ]
 
@@ -395,13 +399,7 @@ method dictionary, and iterating over the class hierarchy.'>
 	<category: 'method dictionary'>
 	self methodDictionary notNil 
 	    ifTrue: 
-		[RegressionTesting 
-		    ifFalse: 
-			[Transcript
-			    nextPutAll: 'Recompiling class: ';
-			    print: self;
-			    nl].
-		self methodDictionary do: [:method | method recompile]]
+		[self methodDictionary do: [:method | method recompile]]
     ]
 
     compileAll: aNotifier [
@@ -411,13 +409,7 @@ method dictionary, and iterating over the class hierarchy.'>
 	<category: 'method dictionary'>
 	self methodDictionary notNil 
 	    ifTrue: 
-		[RegressionTesting 
-		    ifFalse: 
-			[Transcript
-			    nextPutAll: 'Recompiling class: ';
-			    print: self;
-			    nl].
-		self methodDictionary do: [:method | method recompileNotifying: aNotifier]]
+		[self methodDictionary do: [:method | method recompileNotifying: aNotifier]]
     ]
 
     evalString: aString to: anObject [

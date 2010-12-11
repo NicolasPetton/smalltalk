@@ -34,22 +34,22 @@ BrowserState subclass: CategoryState [
 	^ self category
     ]
 
-    classOrMetaSelected [
-        <category: 'accessing'>
+    hasSelectedCategory [
+        <category: 'testing'>
 
-        ^ self classOrMeta
+        ^ true
     ]
 
-    sourceCode [
-	<category: 'accessing'>
+    hasSelectedNamespace [
+        <category: 'testing'>
 
-	^ browser sourceCode
+        ^ true
     ]
 
-    saveSource [
-	<category: 'events'>
+    hasSelectedClass [
+        <category: 'testing'>
 
-	AddMethodCommand on: self
+        ^ true
     ]
 
     displayString [
@@ -58,9 +58,13 @@ BrowserState subclass: CategoryState [
 	^ self classOrMeta displayString
     ]
 
-    codeSaved [
+    updateBrowser: aGtkClassBrowserWidget [
+        <category: 'events'>
 
-        browser codeSaved
+	self classOrMeta isClass 
+			    ifTrue: [ aGtkClassBrowserWidget updateInstanceSideMethodCategory: self category ]
+			    ifFalse: [ aGtkClassBrowserWidget updateClassSideMethodCategory: self category ].
+        aGtkClassBrowserWidget clearSource
     ]
 ]
 

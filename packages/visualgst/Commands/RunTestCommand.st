@@ -1,9 +1,9 @@
-Command subclass: RunTestCommand [
+MethodCommand subclass: RunTestCommand [
 
     execute [
 	<category: 'command'>
 
-        target classOrMetaSelected debug: target selectedMethodSymbol
+        target state classOrMeta debug: target state selector
     ]
 ]
 

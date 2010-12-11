@@ -189,5 +189,40 @@ Eval [
     cObj storage printNl
 ]
 
+" Play with CPtrs"
+
+Eval [
+    t := CStringType ptrType.
+    c := t new: 2.
+    c value: (CString value: 'abc').
+    (c+1) value: (CString value: 'def').
+    c value value printNl.
+    (c at: 0) value printNl.
+    (c at: 1) value printNl.
+    c
+]
+
+" Play with conversion for ByteArray"
+Eval [
+    c := #(1 2 3) asByteArray.
+    d := c asCData.
+    (d at: 0) printNl.
+    (d at: 1) printNl.
+    (d at: 2) printNl.
+    d free.
+    d free.
+]
+
+" Plat with conversion for String"
+Eval [
+    c := '123' asCData.
+    (c at: 0) printNl.
+    (c at: 1) printNl.
+    (c at: 2) printNl.
+    (c at: 3) printNl.
+    c free.
+    c free.
+]
+
 " ### need a lot more!"
 

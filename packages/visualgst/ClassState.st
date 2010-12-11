@@ -7,6 +7,18 @@ BrowserState subclass: ClassState [
 	    print: self classOrMeta
     ]
 
+    hasSelectedNamespace [
+        <category: 'testing'>
+
+        ^ true
+    ]
+
+    hasSelectedClass [
+        <category: 'testing'>
+
+        ^ true
+    ]
+
     namespace [
 	<category: 'accessing'>
 
@@ -19,10 +31,12 @@ BrowserState subclass: ClassState [
 	^ state
     ]
 
-    saveSource [
-	<category: 'events'>
+    updateBrowser: aGtkClassBrowserWidget [
+        <category: 'events'>
 
-	browser acceptClassDefinitionForState: self
+        aGtkClassBrowserWidget 
+                        updateClassOfCategory: self classOrMeta;
+                        displayClassSource: self classOrMeta
     ]
 ]
 

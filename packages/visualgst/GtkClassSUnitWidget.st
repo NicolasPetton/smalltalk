@@ -1,48 +1,64 @@
-GtkClassWidget subclass: GtkClassSUnitWidget [
+GtkCategorizedClassWidget subclass: GtkClassSUnitWidget [
 
-    classModel [
-        <category: 'initialization'>
+    addToModel: aClass [
 
-        ^ GtkClassSUnitModel
+        (aClass superclass environment == self namespace and: [ (aClass superclass category = self category or: [ self category isEmpty ]) and: [ aClass superclass ~~ Smalltalk.TestCase ] ]) 
+                    ifFalse: [ model append: aClass class ]
+                    ifTrue: [ model append: aClass class parent: aClass superclass class ]
     ]
 
-    hasSelectedClass [
-	<category: 'testing'>
+    root [
+	<category: 'accessing'>
 
-	^ classesTree getSelection countSelectedRows > 0
+        ^ Smalltalk.TestCase
+    ]
+
+    selectionMode [
+        <category: 'accessing'>
+
+        ^ GTK.Gtk gtkSelectionMultiple
     ]
 
     allClassNames [
+        <category: 'accessing'>
+
 	| classes names |
 	classes := self selectedClasses.
 	names := classes collect: [ :each | each name asString ].
-	^names fold: [ :a :b | a, ', ', b ]
+	^ names fold: [ :a :b | a, ', ', b ]
+    ]
+
+    hasSelectedClass [
+        <category: 'testing'>
+
+        ^ (classesTree getSelection getSelectedRows: nil) ~= nil
     ]
 
     selectedClass [
         <category: 'accessing'>
 
-        | glist string results |
-        (glist := classesTree getSelection getSelectedRows: nil) ifNil: [ ^nil ].
-	glist do: [ :rawData | | iter path |
-	    path := rawData castTo: GTK.GtkTreePath type.
-	    iter := self model gtkModel getIter: path.
-	    string := ((self model gtkModel getOop: iter column: 0) subStrings: $ ) at: 1.
-	    ^self namespace classAt: string asSymbol ].
+	^ self selectedClasses first
     ]
 
     selectedClasses [
         <category: 'accessing'>
 
-        | glist string results |
-	results := OrderedCollection new.
-        glist := (classesTree getSelection getSelectedRows: nil) ifNil: [ #() ].
-	glist do: [ :rawData | | iter path |
-	    path := rawData castTo: GTK.GtkTreePath type.
-	    iter := self model gtkModel getIter: path.
-	    string := ((self model gtkModel getOop: iter column: 0) subStrings: $ ) at: 1.
-	    results add: (self namespace classAt: string asSymbol) ].
-	^ results
+	self hasSelectedClass ifFalse: [ self error: 'Nothing is selected' ].
+	^ classesTree selections collect: [:each| each asClass]
+    ]
+
+    recategorizedEvent: anEvent [
+        <category: 'model event'>
+
+        (anEvent item inheritsFrom: TestCase) ifFalse: [ ^ self ].
+        super recategorizedEvent: anEvent
+    ]
+
+    addEvent: anEvent [
+        <category: 'model event'>
+
+        (anEvent item inheritsFrom: TestCase) ifFalse: [ ^ self ].
+        super addEvent: anEvent
     ]
 ]
 

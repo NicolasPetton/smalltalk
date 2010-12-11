@@ -714,7 +714,7 @@ static const class_definition class_info[] = {
    NULL, NULL },
 
   {&_gst_c_callback_descriptor_class, &_gst_c_callable_class,
-   GST_ISP_ULONG, false, 1,
+   GST_ISP_ULONG, true, 1,
    "CCallbackDescriptor",
    "block",
    NULL, NULL },
@@ -2152,7 +2152,7 @@ _gst_set_file_stream_file (OOP fileStreamOOP,
   if (buffered)
     {
       char buffer[1024];
-      memzero (buffer, sizeof (buffer));
+      memset (buffer, 0, sizeof (buffer));
       fileStream->collection =
 	_gst_counted_string_new (buffer, sizeof (buffer));
       fileStream->ptr = FROM_INT (1);

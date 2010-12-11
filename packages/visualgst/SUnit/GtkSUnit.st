@@ -1,86 +1,13 @@
-GtkMainWindow subclass: GtkSUnit [
-    | state namespaceWidget classWidget methodWidget sourceCodeWidget successfullWidget failedWidget errorWidget namespace class |
-
-    createFileMenus [
-        <category: 'user interface'>
-
-        self accelGroup append:
-            {{'<Control>O'. '<GtkSUnit>/File/Open'}.
-            {'<Control>S'. '<GtkSUnit>/File/Save'}.
-            {'<Control><Shift>S'. '<GtkSUnit>/File/SaveAs'}.
-            {'<Control>Q'. '<GtkSUnit>/File/Quit'}}.
-
-        ^ self createNewMenuEntry: {GTK.GtkMenuItem menuItem: 'New workspace' connectTo: self selector: #newWorkspace.
-            GTK.GtkMenuItem new.
-            GTK.GtkMenuItem menuItem: 'Open' accelPath: '<GtkSUnit>/File/Open' connectTo: self selector: #open.
-            GTK.GtkMenuItem menuItem: 'Save' accelPath: '<GtkSUnit>/File/Save' connectTo: self selector: #saveImage.
-            GTK.GtkMenuItem menuItem: 'Save as...' accelPath: '<GtkSUnit>/File/SaveAs' connectTo: self selector: #saveImageAs.
-            GTK.GtkMenuItem new.
-            GTK.GtkMenuItem menuItem: 'Print' connectTo: self selector: #print.
-            GTK.GtkMenuItem new.
-            GTK.GtkMenuItem menuItem: 'Save image' connectTo: self selector: #saveImage.
-            GTK.GtkMenuItem menuItem: 'Save image as...' connectTo: self selector: #saveImageAs.
-            GTK.GtkMenuItem new.
-            GTK.GtkMenuItem menuItem: 'Close' accelPath: '<GtkSUnit>/File/Quit' connectTo: self selector: #close}
-    ]
-
-    createEditMenus [
-        <category: 'user interface'>
-
-        self accelGroup append: {{'<Control><shift>Z'. '<GtkSUnit>/Edit/Cancel'}.
-            {'<Control>Z'. '<GtkSUnit>/Edit/Undo'}.
-            {'<Control>R'. '<GtkSUnit>/Edit/Redo'}.
-            {'<Control>X'. '<GtkSUnit>/Edit/Cut'}.
-            {'<Control>C'. '<GtkSUnit>/Edit/Copy'}.
-            {'<Control>V'. '<GtkSUnit>/Edit/Paste'}.
-            {'<Control>A'. '<GtkSUnit>/Edit/SelectAll'}}.
-
-        ^ self createNewMenuEntry: {GTK.GtkMenuItem menuItem: 'Cancel edits' accelPath: '<GtkSUnit>/Edit/Cancel' connectTo: self selector: #cancel.
-            GTK.GtkMenuItem menuItem: 'Undo' accelPath: '<GtkSUnit>/Edit/Undo' connectTo: self selector: #undo.
-            GTK.GtkMenuItem menuItem: 'Redo' accelPath: '<GtkSUnit>/Edit/Redo' connectTo: self selector: #redo.
-            GTK.GtkMenuItem new.
-	    GTK.GtkMenuItem menuItem: 'Cut' accelPath: '<GtkSUnit>/Edit/Cut' connectTo: self selector: #cut.
-            GTK.GtkMenuItem menuItem: 'Copy' accelPath: '<GtkSUnit>/Edit/Copy' connectTo: self selector: #copy.
-            GTK.GtkMenuItem menuItem: 'Paste' accelPath: '<GtkSUnit>/Edit/Paste' connectTo: self selector: #paste.
-            GTK.GtkMenuItem new.
-            GTK.GtkMenuItem menuItem: 'Select all' accelPath: '<GtkSUnit>/Edit/SelectAll' connectTo: self selector: #selectAll}
-    ]
+GtkBrowsingTool subclass: GtkSUnit [
+    | namespaceWidget classWidget methodWidget sourceCodeWidget successfullWidget failedWidget errorWidget namespace class state |
 
     createRunMenus [
         <category: 'user interface'>
 
-        ^ self createNewMenuEntry: {GTK.GtkMenuItem menuItem: 'Run test' connectTo: self selector: #runTest}
-    ]
-
-    createToolsMenus [
-        <category: 'user interface'>
-
-        | menu |
-        self accelGroup append: {{'<Control>B'. '<GtkLauncher>/Tools/TabbedClassBrowser'}.
-            {'<Control><shift>B'. '<GtkLauncher>/Tools/ClassBrowser'}.
-            {'<Control>M'. '<GtkLauncher>/Tools/Implementors'}.
-            {'<Control>N'. '<GtkLauncher>/Tools/Senders'}}.
-
-        menu := {GTK.GtkMenuItem menuItem: 'Browser' accelPath: '<GtkLauncher>/Tools/TabbedClassBrowser' connectTo: OpenBrowserCommand selector: #execute.
-            GTK.GtkMenuItem menuItem: 'Browser window' accelPath: '<GtkLauncher>/Tools/ClassBrowser' connectTo: OpenWindowedBrowserCommand selector: #execute.
-            GTK.GtkMenuItem menuItem: 'Workspace' connectTo: OpenWorkspaceCommand selector: #execute.
-            GTK.GtkMenuItem menuItem: 'Implementors' accelPath: '<GtkLauncher>/Tools/Implementors' connectTo: OpenImplementorCommand selector: #execute.
-            GTK.GtkMenuItem menuItem: 'Senders' accelPath: '<GtkLauncher>/Tools/Senders' connectTo: OpenSenderCommand selector: #execute.
-            GTK.GtkMenuItem menuItem: 'SUnit' connectTo: OpenSUnitCommand selector: #execute} asOrderedCollection.
-
-        GtkWebView hasWebkit ifTrue: [ menu addAll: {GTK.GtkMenuItem new.
-            GTK.GtkMenuItem menuItem: 'Assistant' connectTo: OpenAssistantCommand selector: #execute.
-            GTK.GtkMenuItem new.
-            GTK.GtkMenuItem menuItem: 'Smallzilla' connectTo: OpenWebBrowserCommand selector: #execute} ].
-
-        ^ self createNewMenuEntry: menu
-    ]
-
-    createHelpMenus [
-        <category: 'user interface'>
-
-        ^ self createNewMenuEntry: {GTK.GtkMenuItem menuItem: 'About SUnit' connectTo: self selector: #aboutSUnit.
-            GTK.GtkMenuItem menuItem: 'About GNU Smalltalk' connectTo: self selector: #aboutGst}
+        ^{
+		GTK.GtkMenuItem menuItem: 'Load tests' connectTo: self selector: #loadTests.
+		GTK.GtkMenuItem menuItem: 'Run test' connectTo: self selector: #runTest.
+		GTK.GtkMenuItem menuItem: 'Debug test' connectTo: self selector: #debugTest}
     ]
 
     createMenus [
@@ -89,77 +16,19 @@ GtkMainWindow subclass: GtkSUnit [
         self addMenuItem: 'File' withSubmenu: self createFileMenus.
         self addMenuItem: 'Edit' withSubmenu: self createEditMenus.
 	self addMenuItem: 'Run' withSubmenu: self createRunMenus.
+        self addMenuItem: 'Smalltalk' withSubmenu: self createSmalltalkMenus.
         self addMenuItem: 'Tools' withSubmenu: self createToolsMenus.
         self addMenuItem: 'Help' withSubmenu: self createHelpMenus
     ]
 
 
-    createStatusBar [
-        <category: 'user interface'>
-
-        self statusMessage: 'SUnit'
-    ]
-
     createToolbar [
 	<category: 'user interface'>
 
-        | package |
-        package := PackageLoader packageAt: 'VisualGST'.
+	super createToolbar.
 	self
-	    "appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-new')
-				connectSignal: 'clicked' to: OpenWorkspaceCommand selector: #execute userData: nil;
-				setTooltipText: 'Create a new workspace';
-				yourself);"
-	    appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-save')
-				connectSignal: 'clicked' to: SaveImageCommand selector: #execute userData: nil;
-				setTooltipText: 'Save the image';
-				yourself);
 	    appendSeparator;
-	    appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-cut')
-				connectSignal: 'clicked' to: self selector: #cut userData: nil;
-				setTooltipText: 'Cut';
-				yourself);
-	    appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-copy')
-				connectSignal: 'clicked' to: self selector: #copy userData: nil;
-				setTooltipText: 'Copy';
-				yourself);
-	    appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-paste')
-				connectSignal: 'clicked' to: self selector: #paste userData: nil;
-				setTooltipText: 'Paste';
-				yourself);
-	    appendSeparator;
-            appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-undo')
-				connectSignal: 'clicked' to: self selector: #undo userData: nil;
-				setTooltipText: 'Undo';
-				yourself);
-            appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-redo')
-				connectSignal: 'clicked' to: self selector: #redo userData: nil;
-				setTooltipText: 'Redo';
-				yourself);
-            appendSeparator;
-            appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-execute' label: 'Do It')
-                                connectSignal: 'clicked' to: self selector: #doIt userData: nil;
-                                setTooltipText: 'Do It';
-                                yourself);
-            appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-print' label: 'Print It')
-                                connectSignal: 'clicked' to: self selector: #printIt userData: nil;
-                                setTooltipText: 'Print It';
-                                yourself);
-            appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-convert' label: 'Inspect It')
-                                connectSignal: 'clicked' to: self selector: #inspectIt userData: nil;
-                                setTooltipText: 'Inspect It';
-                                yourself);
-            appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-sort-descending' label: 'Debug It')
-                                connectSignal: 'clicked' to: self selector: #debugIt userData: nil;
-                                setTooltipText: 'Debug It';
-                                yourself);
-            appendSeparator;
-            appendToolItem: ((GTK.GtkToolButton newFromStock: 'gtk-apply' label: 'Accept')
-                                connectSignal: 'clicked' to: self selector: #acceptIt userData: nil;
-                                setTooltipText: 'Accept';
-                                yourself);
-            appendSeparator;
-            appendToolItem: ((GTK.GtkToolButton new: (GTK.GtkImage newFromFile: (package / 'Icons/go-run.png') file displayString) label: 'Run test')
+            appendToolItem: ((GTK.GtkToolButton new: (GTK.GtkImage newFromFile: (GtkLauncher / 'Icons/go-run.png') file displayString) label: 'Run test')
                                 connectSignal: 'clicked' to: self selector: #runTest userData: nil;
                                 setTooltipText: 'Run test';
                                 yourself)
@@ -214,49 +83,23 @@ GtkMainWindow subclass: GtkSUnit [
     initialize [
         <category: 'initialization'>
 
-	state := NamespaceState on: self with: Smalltalk.
         super initialize.
-        self
-            title: 'SUnit';
-            createMenus;
-            createToolbar;
-            createStatusBar;
-            centralWidget: self buildCentralWidget.
+	state := NamespaceState on: self with: Smalltalk
     ]
 
     postInitialize [
         <category: 'initialization'>
 
-        window
-            connectSignal: 'delete-event' to: self selector: #'delete:event:' userData: nil
+	super postInitialize.
+	sourceCodeWidget postInitialize
     ]
 
-    aboutSUnit [
-        <category: 'events'>
+    windowTitle [
+	^ 'SUnit'
+    ]
 
-        (GTK.GtkAboutDialog new)
-            setVersion: VisualGST version;
-            setLicense: 'Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the "Software"),
-to deal in the Software without restriction, including without limitation
-the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-sell copies of the Software, and to permit persons to whom the Software is furnished
-to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
-THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
-            setWebsite: VisualGST website;
-            setComments: 'This is a GTK+ wrapper for GNU Smalltalk.';
-            "setAuthors: {'Gwenael Casaccio'. 'Nicolas Petton'};"
-            setProgramName: 'GNU Smalltalk SUnit';
-            run
+    aboutTitle [
+	^ 'About SUnit'
     ]
 
     buildNamespaceWidget [
@@ -329,71 +172,92 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
     onNamespaceChanged [
 	<category: 'namespace events'>
 
-	self checkCodeWidget.
-        namespaceWidget hasSelectedNamespace ifFalse: [ ^ self ].
-	self selectANamespace: namespaceWidget selectedNamespace
+	self checkCodeWidgetAndUpdate: [
+            namespaceWidget hasSelectedNamespace ifFalse: [ ^ self ].
+	    self selectANamespace: namespaceWidget selectedNamespace ]
     ]
 
     selectANamespace: aNamespace [
 	<category: 'browser methods'>
 
-	aNamespace = namespaceWidget selectedNamespace ifFalse: [
+	(namespaceWidget hasSelectedNamespace and: [aNamespace = namespaceWidget selectedNamespace]) ifFalse: [
             namespaceWidget selectANamespace: aNamespace ].
         namespace := aNamespace.
 	aNamespace isNil ifTrue: [ ^self ].
-        classWidget namespace: aNamespace.
+        classWidget namespace: aNamespace category: ''.
 	state := NamespaceState on: self with: aNamespace
     ]
 
     onClassChanged [
 	<category: 'class events'>
 
-	self checkCodeWidget.
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-	self selectAClass: classWidget selectedClass
+	self checkCodeWidgetAndUpdate: [
+            classWidget hasSelectedClass ifFalse: [ ^ self ].
+	    self selectAClass: classWidget selectedClass ]
     ]
 
     selectAClass: aClass [
 	<category: 'browser methods'>
 
-	aClass = classWidget selectedClass ifFalse: [
+	(classWidget hasSelectedClass and: [aClass = classWidget selectedClass]) ifFalse: [
             classWidget selectAClass: aClass ].
         class := aClass.
 	aClass isNil ifTrue: [ ^self ].
 	methodWidget class: class withCategory: '*'.
-	state := CategoryState on: self with: class -> '*'.
-	self selectAnInstanceMethod: nil.
+	state := CategoryState on: self with: class -> '*'
     ]
 
     onMethodChanged [
 	<category: 'method events'>
 
-	self checkCodeWidget.
-	self selectAnInstanceMethod: methodWidget selectedMethodSymbol.
+	self checkCodeWidgetAndUpdate: [
+	    methodWidget hasSelectedMethod ifFalse: [^self].
+	    self selectAnInstanceMethod: methodWidget selectedMethodSymbol ]
     ]
 
     selectAnInstanceMethod: aSymbol [
 	<category: 'browser methods'>
 
-	aSymbol = methodWidget selectedMethodSymbol ifFalse: [
+	(methodWidget hasSelectedMethod and: [aSymbol = methodWidget selectedMethodSymbol]) ifFalse: [
             methodWidget selectAMethod: aSymbol asString ].
-	aSymbol isNil ifTrue: [ ^self ].
 	sourceCodeWidget sourceCode: methodWidget sourceCode.
-	state := MethodState on: self with: class -> methodWidget selectedMethod
+	state := MethodState on: self with: methodWidget selectedMethod
     ]
 
-    classOrMetaSelected [
+    state [
+	<category: 'browser methods'>
+
+        ^state
+    ]
+
+    classOrMeta [
 	<category: 'browser methods'>
 
 	^class
     ]
 
-    selectedCategory [
-	<category: 'browser methods'>
+    loadTest: aPackage [
+	<category: 'private'>
+	<comment: 'I load the unit tests for one package'>
 
-	^methodWidget selectedMethod
-	    ifNil: [ 'unit tests' ]
-	    ifNotNil: [ :method | method methodCategory ]
+	| test files |
+
+	aPackage ifNil: [^self].
+
+	test := aPackage test.
+	test ifNil: [^self].
+
+	test fileIn.
+    ]
+
+    loadTests [
+        <category: 'run events'>
+	<comment: 'I load the unit tests for the loaded packages'>
+
+	Smalltalk Features do: [:each | |package|
+		package := PackageLoader packageAt: each ifAbsent: [nil].
+		self loadTest: package.
+	]
     ]
 
     runTest [
@@ -416,19 +280,41 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
 	results failures do: [ :each | each "logPolicy logStatus inspect" printNl ].
     ]
 
-    onFocusPerform: aSymbol [
+    debugTest [
+	<category: 'run events'>
+
+	classWidget hasSelectedClass ifFalse: [ ^ self ].
+	classWidget selectedClasses do: [ :elem | | test |
+	    test := elem new.
+	    elem selectors do: [ :each |
+		(each matchRegex: 'test' from: 1 to: 4)
+		    ifTrue: [ test setTestSelector: each. test debug ] ] ].
+    ]
+
+    compileError: aString line: line [
+        <category: 'method events'>
+
+        sourceCodeWidget compileError: aString line: line
+    ]
+
+    newMethod [
+        <category: 'method events'>
+
+        AddMethodCommand on: self.
+    ]
+
+    focusedWidget [
 	<category: 'events'>
 
-	sourceCodeWidget hasFocus ifTrue: [ sourceCodeWidget perform: aSymbol ]
+	^sourceCodeWidget focusedWidget
     ]
 
     acceptIt [
-	<category: 'method events'>
+        <category: 'smalltalk events'>
 
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
-	AddMethodCommand on: self.
+        AcceptItCommand on: self
     ]
-
+    
     cancel [
         <category: 'edit events'>
 
@@ -474,66 +360,13 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
     close [
         <category: 'file events'>
 
-        sourceCodeWidget hasChanged ifFalse: [ ^ super close ].
-        self saveCodeOnClose: [ super close ] onSave: [ state saveSource. super close ]
+        self saveCodeOr: [ super close ]
     ]
 
-    delete: aGtkWidget event: aGdkEvent [
-        <category: 'window events'>
+    clearUndo [
+        <category: 'source code'>
 
-        sourceCodeWidget hasChanged ifFalse: [ ^ window hideAll ].
-        self saveCodeOnClose: [ window hideAll ] onSave: [ state saveSource. window hideAll ].
-        ^ true
-    ]
-
-    saveCodeOnClose: closeEvent onSave: saveEvent [
-        <category: 'saving'>
-
-        | dialog |
-        dialog := GTK.GtkMessageDialog
-                                new: window
-                                flags: GTK.Gtk gtkDialogDestroyWithParent
-                                type: GTK.Gtk gtkMessageWarning
-                                buttons: GTK.Gtk gtkButtonsNone
-                                message: 'Save the code before exiting?'
-                                tip: 'If you do not save, your changes to %1 will be lost...' % {state}.
-
-        dialog
-            addButton: 'Close without saving' responseId: 0;
-            addButton: 'Cancel' responseId: 2;
-            addButton: 'Save' responseId: 1;
-            showModalOnAnswer: [ :dlg :res |
-                res = 0 ifTrue: closeEvent.
-                res = 1 ifTrue: saveEvent.
-                dlg destroy ].
-    ]
-
-    checkCodeWidget [
-        <category: 'text editing'>
-
-        self hasChanged ifFalse: [ sourceCodeWidget clearUndo. ^ self ].
-        self saveCodeOnSave: [ state saveSource ].
-        sourceCodeWidget clearUndo
-    ]
-
-    saveCodeOnSave: saveEvent [
-        <category: 'saving'>
-
-        | dialog |
-        dialog := GTK.GtkMessageDialog
-                                new: window
-                                flags: GTK.Gtk gtkDialogDestroyWithParent
-                                type: GTK.Gtk gtkMessageWarning
-                                buttons: GTK.Gtk gtkButtonsNone
-                                message: 'Save changes to this method?'
-                                tip: 'If you do not save, your changes to %1 will be lost...' % {state}.
-
-        dialog
-            addButton: 'Cancel' responseId: 0;
-            addButton: 'Save' responseId: 1;
-            showModalOnAnswer: [ :dlg :res |
-                res = 1 ifTrue: saveEvent.
-                dlg destroy ].
+	sourceCodeWidget clearUndo
     ]
 
     hasChanged [
@@ -552,6 +385,138 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
 	<category: 'code saved'>
 
 	sourceCodeWidget codeSaved
+    ]
+
+    targetObject [
+        <category: 'smalltalk event'>
+
+        ^self state classOrMeta
+    ]
+
+    doIt: object [
+        <category: 'smalltalk event'>
+
+        sourceCodeWidget doIt: object
+    ]
+
+    debugIt: object [
+        <category: 'smalltalk event'>
+
+        sourceCodeWidget debugIt: object
+    ]
+
+    inspectIt: object [
+        <category: 'smalltalk event'>
+
+        sourceCodeWidget inspectIt: object
+    ]
+
+    printIt: object [
+        <category: 'smalltalk event'>
+
+        sourceCodeWidget printIt: object
+    ]
+
+    doIt [
+        <category: 'smalltalk event'>
+
+        DoItCommand on: self
+    ]
+
+    debugIt [
+        <category: 'smalltalk event'>
+
+        DebugItCommand on: self
+    ]
+
+    inspectIt [
+        <category: 'smalltalk event'>
+
+        InspectItCommand on: self
+    ]
+
+    printIt [
+        <category: 'smalltalk event'>
+
+        PrintItCommand on: self
+    ]
+
+    hasChanged [
+	<category: 'testing'>
+
+	^ sourceCodeWidget hasChanged
+    ]
+
+    cancel [
+        <category: 'edit events'>
+
+        self onFocusPerform: #cancel
+    ]
+
+    undo [
+        <category: 'edit events'>
+
+        self onFocusPerform: #undo
+    ]
+
+    redo [
+        <category: 'edit events'>
+
+        self onFocusPerform: #redo
+    ]
+
+    cut [
+        <category: 'edit events'>
+
+        self onFocusPerform: #cut
+    ]
+
+    copy [
+        <category: 'edit events'>
+
+        self onFocusPerform: #copy
+    ]
+
+    paste [
+        <category: 'edit events'>
+
+        self onFocusPerform: #paste
+    ]
+
+    selectAll [
+        <category: 'edit events'>
+
+        self onFocusPerform: #selectAll
+    ]
+
+    find [
+        <category: 'edit events'>
+
+        self onFocusPerform: #showFind
+    ]
+
+    replace [
+        <category: 'edit events'>
+
+        self onFocusPerform: #showReplace
+    ]
+
+    sourceCodeWidgetHasFocus [
+        <category: 'focus'>
+
+        ^ sourceCodeWidget hasFocus
+    ]
+
+    selectedText [
+        <category: 'smalltalk events'>
+
+        ^sourceCodeWidget selectedText
+    ]
+
+    hasSelection [
+        <category: 'smalltalk events'>
+
+        ^sourceCodeWidget hasSelection
     ]
 
 ]

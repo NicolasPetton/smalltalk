@@ -1,69 +1,58 @@
 Command subclass: OpenBrowserCommand [
 
-    extractSingleToken: aToken [
+    defaultDestination [
 	<category: 'parsing'>
 
-	| result |
-        result := Smalltalk at: aToken asSymbol ifAbsent: [ ^ Smalltalk -> Object ].
-        result isClass ifTrue: [ ^ Smalltalk -> result ].
-        result isNamespace ifTrue: [ ^ result -> nil ].
-        ^ Smalltalk -> Object
+        ^self namespace->nil
     ]
 
-    extractMultipleToken: anArray [
-	<category: 'parsing'>
-
-	| start |
-        start := Smalltalk.
-        anArray do: [ :each |
-            start := start at: each asSymbol ifAbsent: [ ^ Smalltalk -> Object ] ].
-        start isClass ifTrue: [ ^ start environment -> start ].
-        start isNamespace ifTrue: [ ^ start -> nil ].
-        ^ Smalltalk -> Object
+    namespace [
+        ^target state namespace ifNil: [Smalltalk]
     ]
 
     extractNamespaceAndClassFrom: aString [
 	<category: 'parsing'>
 
 	| node token start |
-	node := STInST.RBParser parseExpression: aString.
-	node isVariable ifFalse: [ ^ Smalltalk->Object ].
-	token := node name tokenize: '\.'.
-	token size = 1 ifTrue: [ ^ self extractSingleToken: token first ].
-	^ self extractMultipleToken: token
+	[ node := STInST.RBParser parseExpression: aString ] on: Error do: [ ^ self defaultDestination ].
+	node isVariable ifFalse: [ ^ self defaultDestination ].
+
+        start := self namespace.
+        (node name subStrings: $.) do: [ :each |
+            start := start at: each asSymbol ifAbsent: [ ^self checkDestination: start ] ].
+        ^self checkDestination: start
     ]
 
-    extractSelectedItems [
-	<category: ''>
+    checkDestination: anObject [
+	<category: 'parsing'>
 
-	| result |
-	VisualGST uniqueInstance currentWidgetOfBrowser hasSelectedClass
-                ifTrue: [ result := VisualGST uniqueInstance currentWidgetOfBrowser selectedNamespace -> VisualGST uniqueInstance currentWidgetOfBrowser selectedClass ]
-                ifFalse: [ VisualGST uniqueInstance currentWidgetOfBrowser hasSelectedNamespace 
-				    ifTrue: [ result := VisualGST uniqueInstance currentWidgetOfBrowser selectedNamespace -> nil ]
-				    ifFalse: [ result := Smalltalk -> Object ] ].
-	^ result 
+        anObject isClass ifTrue: [ ^ anObject environment -> anObject ].
+        anObject isNamespace ifTrue: [ ^ anObject -> nil ].
+        ^ self defaultDestination
     ]
 
     extractFromSelection [
-	<category: ''>
+	<category: 'parsing'>
 
-	| result selection |
-	(selection := VisualGST uniqueInstance onFocusPerform: #selectedText)
-                ifNotNil: [ result := self extractNamespaceAndClassFrom: selection ]
-                ifNil: [ result := Smalltalk->Object ].
+	| result |
+        target hasSelection
+                ifTrue: [ result := self extractNamespaceAndClassFrom: target selectedText]
+                ifFalse: [ result := self defaultDestination ].
 	^ result
     ]
 
     selection [
 	<category: 'accessing'>
 
-        ^ VisualGST uniqueInstance browserHasFocus
-                    ifTrue: [
-                        (VisualGST uniqueInstance currentWidgetOfBrowser sourceCodeWidgetHasFocus and: [ VisualGST uniqueInstance currentWidgetOfBrowser selectedText isNil not ])
-                                                            ifTrue: [ self extractNamespaceAndClassFrom: VisualGST uniqueInstance currentWidgetOfBrowser selectedText ]
-                                                            ifFalse: [ self extractSelectedItems ] ]
-                    ifFalse: [ self extractFromSelection ]
+        target isNil ifTrue: [^self defaultDestination].
+
+        ((target browserHasFocus not or: [ target sourceCodeWidgetHasFocus ])
+            and: [target hasSelection])
+                ifTrue: [^self extractNamespaceAndClassFrom: target selectedText].
+
+	^target state hasSelectedClass
+                ifTrue: [ target state namespace -> target state classOrMeta asClass ]
+                ifFalse: [ self defaultDestination ]
     ]
 ]
 

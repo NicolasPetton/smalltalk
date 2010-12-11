@@ -1,4 +1,4 @@
-GtkConcreteWidget subclass: GtkObjectInspectorView [
+Object subclass: GtkObjectInspectorView [
     | object model |
 
     GtkObjectInspectorView class >> openOn: anObject [
@@ -19,35 +19,19 @@ GtkConcreteWidget subclass: GtkObjectInspectorView [
 	<category: 'accessing'>
 
 	object := anObject.
-	self refreshModel
     ]
 
-    model [
+    do: aBlock [ 
+	<category: 'iterating'>
+
+	aBlock value: 'self'.
+        self object class allInstVarNames do: aBlock
+    ]
+
+    values [
 	<category: 'accessing'>
 
-	^ model ifNil: [
-	    model := GTK.GtkListStore new: 1 varargs: {GTK.GValue gTypeString} ]
-    ]
-
-    clearModel [
-        <category: 'accessing'>
-
-        self model clear
-    ]
-
-    refreshModel [
-	<category: 'events'>
-   
-	self clearModel.
-	self appendVariable: 'self'.
-	self object class allInstVarNames do: [ :each |
-		self appendVariable: each displayString ]
-    ]
-
-    appendVariable: aString [
-        <category: 'model builder'>
-
-	self model appendItem: {aString}
+	^Array streamContents: [:s | self do: [:value | s nextPut: value]]
     ]
 
     selectedValue: aString [
@@ -57,7 +41,7 @@ GtkConcreteWidget subclass: GtkObjectInspectorView [
         ^ aString = 'self'
             ifTrue: [ self object ]
             ifFalse: [ self object
-			instVarNamed: (aString copyFrom: 2 to: aString size) ]
+			instVarNamed: aString ]
     ]
 
     canDive [

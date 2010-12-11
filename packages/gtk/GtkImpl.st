@@ -8,6 +8,22 @@ GtkTextBuffer extend [
 ]
 
 
+GtkAlignment class extend [
+    new [
+	<category: 'instance creation'>
+        ^self new: 0 yalign: 0 xscale: 1 yscale: 1
+    ]
+]
+
+
+GObject class extend [
+    new [
+	<category: 'instance creation'>
+        ^self new: self getType varargs: #(nil)
+    ]
+]
+
+
 GList extend [
     do: aOneArgBlock [
 	<category: 'iterating'>
@@ -283,8 +299,7 @@ GtkTreeModel extend [
 	<category: 'accessing'>
 	| iter |
 	iter := GTK.GtkTreeIter new.
-	self getIter: iter path: path.
-	^iter
+	^(self getIter: iter path: path) ifTrue: [iter] ifFalse: [nil]
     ]
 
     getIterFirst [
@@ -571,20 +586,6 @@ GtkButton class extend [
     ^ (GTK.GtkButton newWithLabel: aString)
         connectSignal: 'pressed' to: anObject selector: aSymbol userData: nil;
         yourself
-    ]
-]
-
-
-GtkContainer extend [
-
-    focusChildFor: aGtkWindow [
-	<category: '*VisualGST'>
-
-	| child parent |
-	parent := child := self.
-	[ (child := parent getFocusChild) isNil not ] whileTrue: [
-	    parent := child ].
-	^ aGtkWindow getFocus = parent
     ]
 ]
 

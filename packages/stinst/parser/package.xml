@@ -18,6 +18,7 @@
   <filein>SqueakParser.st</filein>
   <filein>SIFParser.st</filein>
   <filein>GSTParser.st</filein>
+  <filein>STEvaluationDriver.st</filein>
   <filein>Exporter.st</filein>
   <filein>NewSyntaxExporter.st</filein>
   <filein>OldSyntaxExporter.st</filein>
@@ -33,29 +34,5 @@
    <filein>PoolResolutionTests.st</filein>
   </test>
 
-
-  <file>ParseTreeSearcher.st</file>
-  <file>RBFormatter.st</file>
-  <file>RBParseNodes.st</file>
-  <file>RBParser.st</file>
-  <file>RBToken.st</file>
-  <file>OrderedSet.st</file>
-  <file>PoolResolutionTests.st</file>
-  <file>STCompLit.st</file>
-  <file>STCompiler.st</file>
-  <file>STDecompiler.st</file>
-  <file>STLoader.st</file>
-  <file>STLoaderObjs.st</file>
-  <file>STSymTable.st</file>
-  <file>RewriteTests.st</file>
-  <file>SqueakParser.st</file>
-  <file>STFileParser.st</file>
-  <file>SIFParser.st</file>
-  <file>GSTParser.st</file>
-  <file>Exporter.st</file>
-  <file>NewSyntaxExporter.st</file>
-  <file>OldSyntaxExporter.st</file>
-  <file>SqueakExporter.st</file>
-  <file>Extensions.st</file>
   <file>ChangeLog</file>
 </package>

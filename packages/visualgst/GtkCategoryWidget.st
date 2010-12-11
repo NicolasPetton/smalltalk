@@ -1,5 +1,5 @@
 GtkConcreteWidget subclass: GtkCategoryWidget [
-    | categoryTree column model class |
+    | categoryTree categories model class |
 
     GtkCategoryWidget >> on: aClass [
 	<category: 'instance creation'>
@@ -13,7 +13,22 @@ GtkConcreteWidget subclass: GtkCategoryWidget [
     initialize [
 	<category: 'initialization'>
 
-	self mainWidget: self buildTreeView
+	self initializeCategories.
+	self mainWidget: self buildTreeView.
+	self registerNotifier
+    ]
+
+    initializeCategories [
+
+	categories := Set new.
+    ]
+
+    registerNotifier [
+        <category: 'initialize-release'>
+
+        (GtkLauncher uniqueInstance systemChangeNotifier)
+            notify: self ofSystemChangesOfItem: #method change: #Added using: #'addEvent:';
+            notify: self ofSystemChangesOfItem: #method change: #Removed using: #'removeEvent:'
     ]
 
     classOrMeta [
@@ -26,45 +41,42 @@ GtkConcreteWidget subclass: GtkCategoryWidget [
 	<category: 'accessing'>
 
 	class := aClass.
-	self refreshModel
+	categories empty.
+	model
+	    item: (self buildCategory: categories);
+	    refresh
     ]
 
-    model [
-	<category: 'accessing'>
+    buildCategory: aSet [
+        <category: 'model builder'>
 
-	^ model ifNil: [ model := GtkCategoryModel on: self classOrMeta ]
+        aSet add: '*'.
+	self classOrMeta methodDictionary ifNil: [ ^ aSet ].
+        self classOrMeta methodDictionary do: [ :each | aSet add: each methodCategory ].
+        ^ aSet asSortedCollection
     ]
 
     emptyModel [
 	<category: 'accessing'>
 
-	categoryTree setModel: (GTK.GtkListStore new: 1 varargs: {GTK.GValue gTypeString})
+	self clear
     ]
 
-    refreshModel [
-	<category: 'events'>
+    clear [
+        <category: 'accessing'>
 
-	model := GtkCategoryModel on: self classOrMeta.
-
-	categoryTree setModel: self model gtkModel.
-	self model isSorted
-            ifFalse: [
-                column signalEmitByName: 'clicked' args: {}.
-		self model sorted: true ]
+        model clear
     ]
 
     buildTreeView [
         <category: 'user interface'>
     
-	categoryTree := (GTK.GtkTreeView newWithSortedTextColumn: self model gtkModel title: 'Method categories')
-			    connectSignal: 'button-press-event' to: self selector: #'onPress:event:' userData: nil;
+	categoryTree := (GTK.GtkTreeView createListWithModel: {{GtkColumnTextType title: 'Method categories'}})
+			    connectSignal: 'button-press-event' to: self selector: #'onPress:event:';
 			    yourself.
-	column := categoryTree getColumn: 0.
 	categoryTree getSelection setMode: GTK.Gtk gtkSelectionBrowse.
-	self model isSorted
-	    ifFalse: [
-		column signalEmitByName: 'clicked' args: {}.
-		self model sorted: true ].
+        (model := GtkListModel on: categoryTree getModel)
+                                        contentsBlock: [ :each | {each displayString} ].
 	^ GTK.GtkScrolledWindow withChild: categoryTree
     ]
 
@@ -83,7 +95,6 @@ GtkConcreteWidget subclass: GtkCategoryWidget [
         menu := GTK.GtkMenu new.
         menu appendMenuItems: {{'Add a category'. self. #newCategory}.
             {'Rename a category'. self. #renameCategory}.
-            {'Delete a category'. self. #deleteCategory}.
             {}.
             {'File out a category'. self. #fileoutCategory}}.
         menu attachToWidget: categoryTree detacher: nil.
@@ -96,7 +107,14 @@ GtkConcreteWidget subclass: GtkCategoryWidget [
 	<category: 'events'>
 
 	categoryTree getSelection
-	    connectSignal: 'changed' to: anObject selector: aSelector userData: nil
+	    connectSignal: 'changed' to: anObject selector: aSelector
+    ]
+
+    state [
+        <category: 'testing'>
+
+        self hasSelectedCategory ifFalse: [ ^ ClassState with: self classOrMeta ].
+        ^ CategoryState with: self classOrMeta->self selectedCategory
     ]
 
     hasSelectedCategory [
@@ -105,37 +123,25 @@ GtkConcreteWidget subclass: GtkCategoryWidget [
 	^ categoryTree hasSelectedItem
     ]
 
-    hasCategory: aString [
-        <category: 'testing'>
-
-        ^ self model hasCategory: aString
-    ]
-
     selectedCategory [
 	<category: 'accessing'>
 
-	| iter |
-	(iter := categoryTree selectedIter) ifNil: [self error: 'Nothing is selected'].
-	^ self model gtkModel getOop: iter column: 0
+	self hasSelectedCategory ifFalse: [ self error: 'nothing is selected' ].
+	^ categoryTree selection
     ]
 
     selectACategory: aString [
         <category: 'item selection'>
 
-        | selection |
-        selection := categoryTree getSelection.
-        selection unselectAll.
-	aString ifNil: [ ^ self ].
-        selection selectIter: (self findIterInACategory: aString)
+	categoryTree select: aString
     ]
 
     findIterInACategory: aString [
         <category: 'item selection'>
 
         | result |
-
-        result := self model findIterInACategory: aString.
-        categoryTree scrollToCell: (self model gtkModel getPath: result) column: nil useAlign: false rowAlign: 0.5 colAlign: 0.5.
+        result := model findIterInACategory: aString.
+        categoryTree scrollToCell: (model gtkModel getPath: result) column: nil useAlign: false rowAlign: 0.5 colAlign: 0.5.
         ^ result
     ]
 
@@ -148,7 +154,7 @@ GtkConcreteWidget subclass: GtkCategoryWidget [
     viewedCategoryModel [
 	<category: 'accessing'>
 
-	^ self model
+	^ model
     ]
 
     newCategory [
@@ -163,16 +169,38 @@ GtkConcreteWidget subclass: GtkCategoryWidget [
         RenameCategoryCommand on: self
     ]
 
-    deleteCategory [
-        <category: 'category events'>
-
-        DeleteCategoryCommand on: self
-    ]
-
     fileoutCategory [
         <category: 'category events'>
 
-        FileoutCategoryCommand on: self classOrMeta categorized: self selectedCategory
+        FileoutCategoryCommand on: self
     ]
+
+    removeEmptyCategory [
+	<category: 'update'>
+
+	| set |
+	set := Set new.
+	self buildCategory: set.
+	(categories - set) do: [ :each | 
+			model remove: each.
+			categories remove: each ]
+    ]
+
+    addEvent: anEvent [
+        <category: 'event'>
+
+        (anEvent item methodClass == self classOrMeta and: [ (model hasItem: anEvent item methodCategory) not ]) ifFalse: [ ^ self ].
+        categories add: anEvent item methodCategory.
+	model append: anEvent item methodCategory.
+	self removeEmptyCategory
+    ]
+
+    removeEvent: anEvent [
+        <category: 'event'>
+
+        (anEvent item methodClass == self classOrMeta and: [ (model hasItem: anEvent item methodCategory) not ]) ifFalse: [ ^ self ].
+	self removeEmptyCategory
+    ]
+
 ]
 

@@ -695,8 +695,7 @@ do arbitrary processing on the files.'>
 	self isPipe ifFalse: [^self fileOp: 6].
 	atEnd isNil 
 	    ifTrue: 
-		[self ensureReadable.
-		self peek.
+		[peek isNil ifTrue: [self ensureReadable. self peek].
 		atEnd isNil ifTrue: [^false]].
 	^atEnd
     ]
@@ -740,7 +739,7 @@ do arbitrary processing on the files.'>
 	<category: 'initialize-release'>
 	self addToBeFinalized.
 	access isNil ifTrue: [access := 3].
-	atEnd := false
+	atEnd := nil
     ]
 
     readStream [
@@ -1041,7 +1040,7 @@ do arbitrary processing on the files.'>
     ]
 
     nextPutInt64: anInteger [
-	"Store anInteger (range: -2^63..2^64-1) on the byte array as 4 bytes"
+	"Store anInteger (range: -2^63..2^64-1) on the byte array as 8 bytes"
 
 	<category: 'binary I/O'>
 	self nextPutBytes: 8 of: anInteger

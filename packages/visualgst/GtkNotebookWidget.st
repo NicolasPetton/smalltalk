@@ -1,5 +1,5 @@
 GtkConcreteWidget subclass: GtkNotebookWidget [
-    | currentWidget notebook pages labels |
+    | currentWidget selectMessage notebook pages labels |
 
     initialize [
 	<category: 'initialization'>
@@ -19,6 +19,10 @@ GtkConcreteWidget subclass: GtkNotebookWidget [
 			    userData: nil;
 			    setShowTabs: false;
 			    yourself
+    ]
+
+    whenSelectionChangedSend: aSymbol to: anObject [
+        selectMessage := DirectedMessage receiver: anObject selector: aSymbol arguments: #()
     ]
 
     addWidget: aWidget labeled: aString [
@@ -63,7 +67,8 @@ GtkConcreteWidget subclass: GtkNotebookWidget [
     switchPageOn: aGtkNotebook page: aGtkNotebookPage number: anInteger [
         <category: 'notebook events'>
 
-        currentWidget := pages at: anInteger + 1
+        currentWidget := pages at: anInteger + 1.
+        selectMessage ifNotNil: [ selectMessage send ]
     ]
 
     closeIt: aGtkButton  at: aGtkConcreteWidget [
@@ -78,10 +83,22 @@ GtkConcreteWidget subclass: GtkNotebookWidget [
 	pages size = 1 ifTrue: [ notebook setShowTabs: false ]
     ]
 
+    widgetAt: anInteger [
+	<category: 'accessing'>
+
+	^ pages at: anInteger
+    ]
+
     currentWidget [
 	<category: 'accessing'>
 
 	^ currentWidget
+    ]
+
+    focusedWidget [
+	<category: 'accessing'>
+
+	^ currentWidget focusedWidget
     ]
 
     currentPage [
@@ -94,6 +111,12 @@ GtkConcreteWidget subclass: GtkNotebookWidget [
 	<category: 'pages'>
 
 	notebook setCurrentPage: aSmallInteger
+    ]
+
+    showLastPage [
+	<category: 'pages'>
+
+	self currentPage: self numberOfPages - 1
     ]
 
     numberOfPages [

@@ -1,7 +1,9 @@
-GtkConcreteWidget subclass: GtkInspectorSourceWidget [
-    | browser displayBrowserMenu object textview |
+GtkTextWidget subclass: GtkInspectorSourceWidget [
+    | object |
     
     GtkInspectorSourceWidget class >> openOn: anObject [
+	<category: 'instance creation'>
+
 	^ (self new)
 	    object: anObject;
 	    yourself
@@ -43,95 +45,33 @@ GtkConcreteWidget subclass: GtkInspectorSourceWidget [
 	aGtkMenu append: menuitem
     ]
 
-    initialize [
-	<category: 'intialization'>
+    targetObject [
+	<category: 'smalltalk event'>
 
-	self mainWidget: self buildTextView
-    ]
-
-    buildTextView [
-	<category: 'user interface'>
-
-	textview := GtkTextWidget new
-			initialize;
-			connectSignal: 'populate-popup' to: self selector: #'popupMenuOn:menu:' userData: nil;
-			yourself.
-	^ GTK.GtkScrolledWindow withChild: textview
-    ]
-
-    text: aString [
-	<category: 'accessing'>
-
-	textview getBuffer setText: aString
+	^object
     ]
 
     doIt [
-	<category: 'events'>
+	<category: 'smalltalk event'>
 
-	| text |
-	text := textview getBuffer getHasSelection 
-		    ifTrue: [ | iter |
-			    iter := textview getBuffer getSelectionBounds ifNil: [^ self].
-			    textview getBuffer getText: (iter at: 1) end: (iter at: 2) includeHiddenChars: false ]
-		    ifFalse: [ textview getBuffer text ].
-        ^ Behavior
-	    evaluate: text
-	    to: object
-	    ifError: [ :fname :lineNo :errorString | "self displayError: errorString at: lineNo + pos" ]
+	DoItCommand on: self
     ]
 
-    printIt [
-	<category: 'events'>
+    debugIt [
+	<category: 'smalltalk event'>
 
-	textview getBuffer insertAtCursor: (self doIt displayString) 
+	DebugItCommand on: self
     ]
 
     inspectIt [
-	<category: 'events'>
+	<category: 'smalltalk event'>
 
-	GtkInspector openOn: self doIt
+	InspectItCommand on: self
     ]
 
-    cancel [
-        <category: 'buffer events'>
+    printIt [
+	<category: 'smalltalk event'>
 
-	self undo
+	PrintItCommand on: self
     ]
-
-    undo [
-        <category: 'buffer events'>
-
-        textview undo
-    ]
-
-    redo [
-        <category: 'buffer events'>
-
-        textview redo
-    ]
-
-    copy [
-        <category: 'text editing'>
-
-        textview signalEmitByName: 'copy-clipboard' args: {}
-    ]
-
-    cut [
-        <category: 'text editing'>
-
-        textview signalEmitByName: 'cut-clipboard' args: {}
-    ]
-
-    paste [
-        <category: 'text editing'>
-
-        textview signalEmitByName: 'paste-clipboard' args: {}.
-    ]
-
-    selectAll [
-        <category: 'text editing'>
-
-        textview signalEmitByName: 'select-all' args: {true}.
-    ]
-
 ]

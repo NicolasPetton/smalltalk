@@ -1,3 +1,239 @@
+2010-12-09  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/PkgLoader.st: Do not modify "self files".
+
+2010-12-05  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/FileDescr.st: Fix deadlock when reading last byte from
+	a two-way pipe.
+
+2010-12-04  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/PkgLoader.st: Add <filein> tags that do not have a matching
+	<built-file> tag to #files.  Do not print <file> tags for files
+	that are already printed with <filein>.
+
+2010-12-04  Paolo Bonzini <bonzini@gnu.org>
+
+	* tests/strings.st: Add testcase.
+	* tests/strings.ok: Regenerate.
+
+2010-11-13  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Semaphore.st: Fix race.
+
+2010-11-10  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Delay.st: Remove ActiveDelay, simplify code.
+
+2010-11-10  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/ContextPart.st: Make accesses to out of bounds stack
+	slots safe.
+
+2010-11-10  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Delay.st: Add #asAbsolute, #isAbsolute.  Add #postCopy
+	to make copied delays reusable.
+
+2010-11-10  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Semaphore.st: Document return value of #wait.  Use it to
+	simplify #critical:.
+	* kernel/Delay.st: Add return value from #timedWaitOn:.
+	* testsuite/delays.st: Test return values of #timedWaitOn:.
+	* testsuite/delays.ok: Regenerate.
+
+2010-11-10  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Delay.st: Add #timedWaitOn:.
+	* testsuite/delays.st: Add testcases.
+	* testsuite/delays.ok: Regenerate.
+
+2010-11-10  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Delay.st: Fix race.
+
+2010-11-10  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Delay.st: Add delaySemaphore to detect reentrant usage
+	of a Delay.  Change DelayEvent to DelayRequestor throughout, changing
+	it and ActiveDelay to not be an Association anymore.  Use #isActive
+	to distinguish between schedule and unschedule requests.
+
+2010-11-10  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Delay.st: Slight simplification of #wait.
+
+2010-11-08  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/SeqCollect.st: Optimize #atAllPut:.
+	* examples/Bench.st: Use #atAllPut: for array initialization.
+
+2010-11-02  Paolo Bonzini <bonzini@gnu.org>
+
+	* examples/Bench.st: Increase runtime to keep up with newer
+	computers.
+
+2010-10-24  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Iterable.st: Add #ifNil:ifNotNilDo: and friends.
+	* kernel/UndefObject.st: Likewise.
+
+2010-10-23  Paolo Bonzini <bonzini@gnu.org>
+
+	* examples/MiniDebugger.st: Fix and improve process commands.
+
+2010-10-19  Paolo Bonzini <bonzini@gnu.org>
+
+	* examples/Methods.st: Fix bitrot.
+
+2010-10-17  Holger Hans Peter Freyther  <zecke@selfish.org>
+
+	* tests/cobject.st: Add client code for ByteArray>>#asCData and
+	String>>#asCData.
+	* tests/cobject.ok: Update the result.
+
+2010-10-17  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/String.st: Document NULL-termination of output of
+	#asCData and #asCData:.
+
+2010-10-17  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/UndefObject.st: Add #inheritsFrom:
+	* scripts/Test.st: Automatically load SUnit.
+
+2010-10-16  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/ByteArray.st: Add #asCData.
+	* kernel/String.st: Add #asCData.
+
+2010-10-16  Paolo Bonzini <bonzini@gnu.org>
+
+	* scripts/GenDoc.st: Handle warnings from STClassLoader, document
+	all loaded classes rather than only the fully defined ones.
+
+2010-10-15  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/ByteArray.st: Add #castTo:.
+
+2010-10-07  Paolo Bonzini <bonzini@gnu.org>
+
+	* tests/testsuite.at: Mark packages depending on Iconv as optional.
+	* tests/testsuite: Regenerate.
+
+2010-09-28  Holger Hans Peter Freyther  <zecke@selfish.org>
+
+	* kernel/FileDescr.st: Fix a typo.
+
+2010-09-28  Holger Hans Peter Freyther  <zecke@selfish.org>
+
+	* tests/classes.ok: Remove "Recompiling" messages.
+	* tests/mutate.ok: Remove "Recompiling" messages.
+
+2010-09-28  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Behavior.st: Recompile this class is "removed" is true.
+	Remove #subclassesNeedRecompilation since it's useless now with no
+	"Recompiling" messages.
+
+2010-09-27  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Behavior.st: Remove "Recompiling" messages.
+	* kernel/CompildMeth.st: Remove "Recompiling" messages.
+	* kernel/Metaclass.st: Remove "Recompiling" messages.
+
+2010-09-25  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/SysExcept.st: Fix duplicate instance variable declaration.
+
+2010-09-25  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Behavior.st: Fix #instanceVariableNames: to always recompile
+	when needed.  Reported by Mathieu Suen.
+	* tests/classes.st: Add testcase.
+	* tests/classes.ok: Regenerate.
+
+2010-09-13  Holger Hand Peter Freyther  <zecke@selfish.org>
+
+	* tests/strings.st: Tests for String>>asNumber.
+	* tests/strings.ok: Regenerate.
+
+2010-09-13  Paolo Bonzini <bonzini@gnu.org>
+
+	* tests/cobjects.st: Add CPtr testcase.
+	* tests/cobjects.ok: Regenerate.
+
+2010-08-31  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Float.st: Correctly print numbers that require extra
+	digits to be distinguished.  Also try rounding down to eliminate
+	long sequence of zeros.  Reported by Nicolas Petton.
+	* tests/floatmath.st: Add testcases.
+	* tests/floatmath.ok: Regenerate.
+
+2010-08-31  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Number.st: Read base-10 exponents.
+
+2010-08-05  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/URL.st: Add #scheme:host:path:, fix #scheme:path:.
+
+2010-07-26  Paolo Bonzini <bonzini@gnu.org>
+
+	* scripts/Remote.st: Fix typo.
+
+2010-06-16  Holger Hans Peter Freyther  <zecke@selfish.org>
+
+	* kernel/File.st: Remove unused local variable.
+
+2010-06-06  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/CompildCode.st: Implement #= using identity.  Reported
+	by Gwenael Casaccio.
+
+2010-06-03  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/PkgLoader.st: Add /usr/share/smalltalk/site-packages.
+
+2010-05-31  Paolo Bonzini <bonzini@gnu.org>
+
+	* scripts/Package.st: Remove debugging output.  Change "git fetch"
+	to "git pull".
+
+2010-05-27  Gwenael Casaccio  <mrgwen@gmail.com>
+
+	* kernel/LookupKey.st: Remove value instance variable.
+
+2010-05-25  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/Object.st: Fix error message for storing UnicodeCharacters
+	into Strings.
+
+2010-05-21  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/FileDescr.st: Fix #atEnd for pipes.
+
+2010-05-21  Paolo Bonzini <bonzini@gnu.org>
+
+	* kernel/DynVariable.st: Reimplement DynamicVariable here.
+	* kernel/ProcEnv.st: Add methods used by DynamicVariable.
+	* kernel/SysExcept.st: Remove old implementation from here.
+
+2010-05-19  Paolo Bonzini <bonzini@gnu.org>
+
+	* scripts/Remote.st: Gracefully handle #atEnd on the remote socket.
+
+2010-05-03  Holger Hans Peter Freyther <zecke@selfish.org>
+
+	* gst-tool.c: Add -v|-V|--verbose to all tools.
+	* scripts/Package.st: Handle the verbose option.
+	* scripts/GenDoc.st: Likewise.
+	* scripts/Profile.st: Likewise.
+	* scripts/Remote.st: Likewise.
+
 2010-04-15  Paolo Bonzini <bonzini@gnu.org>
 
 	* kernel/Regex.st: Fix printing a MatchingRegexResults.

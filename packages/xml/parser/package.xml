@@ -8,12 +8,11 @@
     <sunit>XML.XMLParserTest</sunit>
 
     <filein>XMLTests.st</filein>
-    <file>XMLTests.st</file>
   </test>
 
   <prereq>XML-SAXParser</prereq>
   <prereq>XML-DOM</prereq>
+  <prereq>Iconv</prereq>
 
   <filein>XML.st</filein>
-  <file>XML.st</file>
 </package>

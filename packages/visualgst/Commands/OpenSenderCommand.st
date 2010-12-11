@@ -1,11 +1,33 @@
 Command subclass: OpenSenderCommand [
 
+    selection [
+        <category: 'focus checking'>
+
+        target isNil ifTrue: [^nil].
+
+        ((target browserHasFocus not and: [target hasSelection])
+            or: [ target sourceCodeWidgetHasFocus ])
+                ifTrue: [^target selectedMethodSymbol].
+
+        ^target state hasSelectedMethod
+                ifTrue: [ target state selector ]
+                ifFalse: [ nil ]
+    ]
+
+    precondition [
+        <category: 'temporary'>
+        "HACK!"
+
+        ^target launcher notNil
+    ]
+
     execute [
         <category: 'command'>
 
-	target isNil
-	    ifTrue: [ GtkSender open ]
-	    ifFalse: [ GtkSender openOn: target selectedMethodSymbol ]
+        | selection |
+        selection := self selection.
+        selection isNil ifTrue: [ ^ target launcher showHideSender ].
+	target launcher showSenderOn: selection
     ]
 ]
 

@@ -51,7 +51,6 @@
 
 (defvar smalltalk-mode-syntax-table 
   (let ((table (make-syntax-table)))
-    (setq smalltalk-mode-syntax-table (make-syntax-table))
     ;; Make sure A-z0-9 are set to "w   " for completeness
     (let ((c 0))
       (setq c ?0)
@@ -66,9 +65,10 @@
       (while (<= c ?z)
 	(setq c (1+ c))
 	(modify-syntax-entry c "w   " table)))
+    (modify-syntax-entry 10  " >  " table) ; Comment (generic)
     (modify-syntax-entry ?:  ".   " table) ; Symbol-char
     (modify-syntax-entry ?_  "_   " table) ; Symbol-char
-    (modify-syntax-entry ?\" "!   " table) ; Comment (generic)
+    (modify-syntax-entry ?\" "!1  " table) ; Comment (generic)
     (modify-syntax-entry ?'  "\"  " table) ; String
     (modify-syntax-entry ?#  "'   " table) ; Symbol or Array constant
     (modify-syntax-entry ?\( "()  " table) ; Grouping
@@ -88,7 +88,7 @@
     (modify-syntax-entry ?+  ".   " table) ; math
     (modify-syntax-entry ?-  ".   " table) ; math
     (modify-syntax-entry ?*  ".   " table) ; math
-    (modify-syntax-entry ?/  ".   " table) ; math
+    (modify-syntax-entry ?/  ".2  " table) ; math
     (modify-syntax-entry ?=  ".   " table) ; bool/assign
     (modify-syntax-entry ?%  ".   " table) ; valid selector
     (modify-syntax-entry ?&  ".   " table) ; boolean
@@ -261,9 +261,20 @@
 		     (forward-sexp 1))
 		 (error t))
 	       (if prev
-		   (progn (goto-char prev)
-			  (beginning-of-line)
-			  (skip-chars-forward " \t"))
+		   (progn
+		     (goto-char prev)
+		     (condition-case nil
+			 (progn
+			   (forward-sexp 1)
+			   (if (and (< (point) here)
+				    (= (char-before) ?\]))
+			       (progn 
+				 (skip-syntax-forward " \t")
+				 (setq prev (point)))))
+		       (error t))
+		     (goto-char prev)
+		     (beginning-of-line)
+		     (skip-chars-forward " \t"))
 		 (goto-char start))))))
 
 (defun smalltalk-begin-of-defun ()
@@ -557,7 +568,7 @@ expressions."
 
 		       ;; we're top level
 		       (setq indent-amount (smalltalk-toplevel-indent nil))))
-		    ((= (preceding-char) ?.) ;at end of statement
+		    ((smalltalk-at-end-of-statement) ;end of statement or after temps
 		     (smalltalk-find-statement-begin)
 		     (setq indent-amount (smalltalk-current-column)))
 		    ((= (preceding-char) ?:)
@@ -577,6 +588,21 @@ expressions."
 		  (error (beginning-of-line)))
 	      (+ (smalltalk-current-column)
 		 smalltalk-indent-amount)))))))
+
+(defun smalltalk-at-end-of-statement ()
+  (save-excursion
+    (or (= (preceding-char) ?.)
+	(and (= (preceding-char) ?|)
+	     (progn
+	       (backward-char 1)
+	       (while (and (not (bobp)) (looking-back "[ \t\na-zA-Z]"))
+		 (skip-chars-backward " \t\n")
+		 (skip-chars-backward "a-zA-Z"))
+	       (if (= (preceding-char) ?|) 
+		   (progn
+		     (backward-char 1)
+		     (skip-chars-backward " \t\n")))
+	       (bobp))))))
 
 (defun smalltalk-calculate-indent ()
     (cond
@@ -620,7 +646,6 @@ or non-white space, non-comment character"
 		(= (preceding-char) ?\"))
     (search-backward "\"" nil t 2)))
 	
-
 (defun smalltalk-current-column ()
   "Returns the current column of the given line, regardless of narrowed buffer."
   (save-restriction
@@ -742,9 +767,9 @@ following on the same line."
 	  (and (bolp)
 	       (progn (smalltalk-backward-whitespace)
 		      (= (preceding-char) ?!))))
-      (= (line-number-at-pos)
-	 (progn (smalltalk-begin-of-scope)
-		(line-number-at-pos))))))
+      (let ((curr-line-pos (line-number-at-pos)))
+	(if (smalltalk-begin-of-scope)
+	    (= curr-line-pos (line-number-at-pos)))))))
 
 (defun smalltalk-at-begin-of-defun ()
   "Returns T if at the beginning of a method definition, otherwise nil"
@@ -755,10 +780,9 @@ following on the same line."
 	  (and (bolp)
 	       (progn (smalltalk-backward-whitespace)
 		      (= (preceding-char) ?!))))
-      (= (line-number-at-pos)
-	 (progn (smalltalk-begin-of-defun)
-		(line-number-at-pos))))))
-
+      (let ((curr-line-pos (line-number-at-pos)))
+	(if (smalltalk-begin-of-defun)
+	    (= curr-line-pos (line-number-at-pos)))))))
 
 (defun smalltalk-indent-for-colon ()
   (let (indent-amount c start-line state done default-amount
@@ -934,7 +958,7 @@ Whitespace is defined as spaces, tabs, and comments."
 	curr-hit-point curr-hit new-hit-point new-hit)
     (save-excursion
       (if (setq curr-hit-point
-		(search-backward-regexp "^![ \t]*\\(\\w+\\)[ \t]+" nil t))
+		(search-backward-regexp "^![ \t]*\\(\\(\\w+\\.\\)*\\w+\\)[ \t]+" nil t))
 	  (setq curr-hit (buffer-substring
 			  (match-beginning 1)
 			  (match-end 1)))))
@@ -955,7 +979,7 @@ Whitespace is defined as spaces, tabs, and comments."
     (save-excursion
       (if (setq new-hit-point
 		(search-backward-regexp
-		 "^[ \t]*\\(\\w+\\)[ \t]+extend[ \t]+\\[" nil t))
+		 "^[ \t]*\\(\\w+\\.\\)*\\(\\w+\\)[ \t]+extend[ \t]+\\[" nil t))
 	  (setq new-hit (buffer-substring
 			 (match-beginning 1)
 			 (match-end 1)))))
@@ -967,33 +991,33 @@ Whitespace is defined as spaces, tabs, and comments."
     (save-excursion
       (if (setq new-hit-point
 		(search-backward-regexp
-		 "^[ \t]*\\w+[ \t]+\\(variable\\|variableWord\\|variableByte\\)?subclass:[ \t]+#?\\(\\w+\\)" nil t))
+		 "^[ \t]*\\(\\w+\\.\\)*\\w+[ \t]+\\(variable\\|variableWord\\|variableByte\\)?subclass:[ \t]+#?\\(\\w+\\)" nil t))
 	  (setq new-hit (buffer-substring
-			 (match-beginning 2)
-			 (match-end 2)))))
+			 (match-beginning 3)
+			 (match-end 3)))))
     (if (and new-hit-point
 	     (or (not curr-hit-point) (> new-hit-point curr-hit-point)))
 	(progn (setq curr-hit-point new-hit-point)
 	       (setq curr-hit new-hit)))
     (cons curr-hit curr-hit-point)))
 
-(defun smalltalk-current-scope-point ()
-  (let ((curr-hit-point (smalltalk-current-class-point))
-	new-hit-point)
-    (save-excursion
-      (setq new-hit-point
-		(search-backward-regexp "^[ \t]*Eval[ \t]+\\[" nil t)))
-    (if (and new-hit-point
-	     (or (not curr-hit-point) (> new-hit-point curr-hit-point)))
-	(setq curr-hit-point new-hit-point))
-    
-    (save-excursion
-      (setq new-hit-point
-	    (search-backward-regexp "^[ \t]*Namespace[ \t]+current:[ \t]+[A-Za-z0-9_.]+[ \t]+\\[" nil t)))
-    (if (and new-hit-point
-	     (or (not curr-hit-point) (> new-hit-point curr-hit-point)))
-	(setq curr-hit-point new-hit-point))
 
+
+(defun smalltalk-current-scope-point ()
+  (defun smalltalk-update-hit-point (current search)
+    (save-excursion
+      (let ((new-hit-point (funcall search)))
+	(if (and new-hit-point
+		 (or (not current) (> new-hit-point current)))
+	    new-hit-point
+	  current))))
+  (let ((curr-hit-point (smalltalk-current-class-point)))
+    (setq curr-hit-point 
+	  (smalltalk-update-hit-point curr-hit-point 
+				      #'(lambda ()(search-backward-regexp "^[ \t]*Eval[ \t]+\\[" nil t))))
+    (setq curr-hit-point 
+	  (smalltalk-update-hit-point curr-hit-point 
+				      #'(lambda ()(search-backward-regexp "^[ \t]*Namespace[ \t]+current:[ \t]+[A-Za-z0-9_.]+[ \t]+\\[" nil t))))
     curr-hit-point))
 
 (defun smalltalk-current-class-point ()

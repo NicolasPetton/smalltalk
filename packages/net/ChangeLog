@@ -1,3 +1,53 @@
+2010-12-07  Paolo Bonzini  <bonzini@gnu.org>
+
+	* MIME.st: Add #assertNoLookahead.
+	* HTTP.st: Use it instead of going through a ConcatenatedStream.
+
+2010-12-07  Paolo Bonzini  <bonzini@gnu.org>
+
+	* gnutls-wrapper.c: New.
+	* Base.st: Support SSL sockets.
+	* HTTP.st: Declare SSL port number.
+
+2010-12-07  Paolo Bonzini  <bonzini@gnu.org>
+
+	* Base.st: Add stub https support.
+	* URIResolver.st: Use it.
+
+2010-12-05  Paolo Bonzini  <bonzini@gnu.org>
+
+	* URIResolver.st: Create NetClient objects outside of the
+	methods that actually speak to the NetClient.
+
+2010-12-05  Paolo Bonzini  <bonzini@gnu.org>
+
+	* URIResolver.st: Remove broken support for mailto and postto.
+
+2010-12-05  Paolo Bonzini  <bonzini@gnu.org>
+
+	* Base.st: Use lazy initialization for clientPI.
+
+2010-12-05  Paolo Bonzini  <bonzini@gnu.org>
+
+	* Base.st: Move connectionStream from ProtocolInterpreter to Client.
+	* HTTP.st: Adjust direct uses of the instance variable.
+	* IMAP.st: Adjust direct uses of the instance variable.
+	* NNTP.st: Adjust direct uses of the instance variable.
+
+2010-12-04  Paolo Bonzini  <bonzini@gnu.org>
+
+	* package.xml: Remove now superfluous <file> tags.
+
+2010-07-19  Paolo Bonzini  <bonzini@gnu.org>
+
+	* Base.st: Move #defaultPortNumber to client class side.
+	* FTP.st: Move #defaultPortNumber to client class side.
+	* HTTP.st: Move #defaultPortNumber to client class side.
+	* IMAP.st: Move #defaultPortNumber to client class side.
+	* NNTP.st: Move #defaultPortNumber to client class side.
+	* POP.st: Move #defaultPortNumber to client class side.
+	* SMTP.st: Move #defaultPortNumber to client class side.
+
 2010-02-19  Paolo Bonzini  <bonzini@gnu.org>
 
 	* NetServer.st: Do not use instance-based exceptions.

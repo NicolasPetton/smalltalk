@@ -1,5 +1,5 @@
 GtkConcreteWidget subclass: GtkInspectorWidget [
-    | object inspectorTree workspaceWidget objectView stack |
+    | inspector model object inspectorTree workspaceWidget objectView stack |
 
     GtkInspectorWidget >> openOn: anObject [
 	<category: 'instance creation'>
@@ -14,7 +14,20 @@ GtkConcreteWidget subclass: GtkInspectorWidget [
 	<category: 'initialization'>
 
 	stack := OrderedCollection new.
-	self mainWidget: self buildView
+	self mainWidget: self buildView.
+	self whenSelectionChangedSend: #onVariableChanged to: self.
+    ]
+
+    postInitialize [
+	<category: 'initialization'>
+
+	workspaceWidget postInitialize
+    ]
+
+    inspector: aGtkInspector [
+	<category: 'accessing'>
+
+	inspector := aGtkInspector	
     ]
 
     object [
@@ -27,37 +40,22 @@ GtkConcreteWidget subclass: GtkInspectorWidget [
 	<category: 'accessing'>
 
 	object := anObject.
-	objectView := object inspectorView openOn: self object.
-	inspectorTree setModel: objectView model.
-	self refreshModel
-    ]
-
-    model [
-	<category: 'accessing'>
-
-        ^ objectView ifNil: [
-            objectView := GTK.GtkListStore new: 1 varargs: {GTK.GValue gTypeString} ]
-    ]
-
-    clearModel [
-        <category: 'accessing'>
-
-        self model clear
-    ]
-
-    refreshModel [
-	<category: 'events'>
-  
-	self model refreshModel
+	objectView := object inspectorView openOn: anObject.
+	workspaceWidget object: anObject.
+	inspector isNil ifFalse: [ inspector object: anObject ].
+	model 
+	    item: objectView;
+	    refresh
     ]
 
     buildTreeWidget [
 	<category: 'user interface'>
 
-	inspectorTree := (GTK.GtkTreeView newWithTextColumn: self model title: 'Variables')
-			    connectSignal: 'button-press-event' to: self selector: #'onPress:event:' userData: nil;
-			    yourself.
-	self whenSelectionChangedSend: #onVariableChanged to: self.
+        inspectorTree := (GTK.GtkTreeView createListWithModel: {{GtkColumnTextType title: 'Variables'}})
+                            connectSignal: 'button-press-event' to: self selector: #'onPress:event:' userData: nil;
+                            yourself.
+        (model := GtkListModel on: inspectorTree getModel)
+                                        contentsBlock: [ :each | {each displayString} ].
         ^ GTK.GtkScrolledWindow withChild: inspectorTree
     ]
 
@@ -86,7 +84,7 @@ GtkConcreteWidget subclass: GtkInspectorWidget [
             connectSignal: 'changed' to: anObject selector: aSelector userData: nil
     ]
 
-    hasSelectedClass [
+    hasSelectedValue [
         <category: 'testing'>
 
         ^ inspectorTree hasSelectedItem 
@@ -95,22 +93,21 @@ GtkConcreteWidget subclass: GtkInspectorWidget [
     onVariableChanged [
 	<category: 'events'>
 
-	self hasSelectedClass ifFalse: [ workspaceWidget text: ''. ^ self ].
+	self hasSelectedValue ifFalse: [ workspaceWidget text: ''. ^ self ].
 	workspaceWidget text: self selectedValue displayString
     ]
 
     selectedItem [
 	<category: 'item selection'>
 
-	| iter |
-        (iter := inspectorTree selectedIter) ifNil: [self error: 'Nothing is selected'].
-        ^ self model model getOop: iter column: 0
+        self hasSelectedValue ifFalse: [self error: 'Nothing is selected'].
+        ^ inspectorTree selection
     ]
 
     selectedValue [
 	<category: 'item selection'>
 
-	^ self model selectedValue: self selectedItem
+	^ objectView selectedValue: self selectedItem
     ]
 
     onPress: aGtkWidget event: aGdkEvent [
@@ -124,9 +121,6 @@ GtkConcreteWidget subclass: GtkInspectorWidget [
             {}.
             {'Dive'. self. #dive}.
 	    {'Back'. self. #back}.
-            {}.
-            {'Accept'. self. #accept}.
-	    {'Cancel'. self. #cancel}.
             {}.
             {'File out object'. self. #fileoutObject}}.
         menu attachToWidget: inspectorTree detacher: nil.
@@ -144,9 +138,9 @@ GtkConcreteWidget subclass: GtkInspectorWidget [
     dive [
 	<category: 'events'>
 
-	(self selectedItem = 'self' or: [ self model canDive not ]) ifTrue: [ ^ self ].
+	(self selectedItem = 'self' or: [ objectView canDive not ]) ifTrue: [ ^ self ].
 	stack addFirst: self object.
-	self object: self selectedValue
+        self object: self selectedValue
     ]
 
     back [
@@ -155,5 +149,66 @@ GtkConcreteWidget subclass: GtkInspectorWidget [
 	stack isEmpty ifTrue: [ ^ self ].
 	self object: stack removeFirst
     ]
+
+    doIt: object [
+        <category: 'smalltalk event'>
+
+        workspaceWidget doIt: object
+    ]
+
+    debugIt: object [
+        <category: 'smalltalk event'>
+
+        workspaceWidget debugIt: object
+    ]
+
+    inspectIt: object [
+        <category: 'smalltalk event'>
+
+        workspaceWidget inspectIt: object
+    ]
+
+    printIt: object [
+        <category: 'smalltalk event'>
+
+        workspaceWidget printIt: object
+    ]
+
+    copy [
+        <category: 'text editing'>
+
+	workspaceWidget copy
+    ]
+
+    cut [
+        <category: 'text editing'>
+
+	workspaceWidget cut
+    ]
+
+    paste [
+        <category: 'text editing'>
+
+	workspaceWidget paste
+    ]
+
+    selectAll [
+        <category: 'text editing'>
+
+	workspaceWidget selectAll
+    ]
+ 
+    hasSelection [
+	<category:'text testing'>
+
+	^ workspaceWidget hasSelection
+    ]
+ 
+    selectedText [
+	<category: 'text editing'>
+
+	^ workspaceWidget selectedText
+    ]
+
 ]
 

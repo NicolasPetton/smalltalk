@@ -41,6 +41,16 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 '>
     <category: 'NetClients-HTTP'>
 
+    HTTPClient class >> defaultPortNumber [
+	<category: 'constants'>
+	^80
+    ]
+
+    HTTPClient class >> defaultSSLPortNumber [
+	<category: 'constants'>
+	^443
+    ]
+
     HTTPClient class >> exampleURL: url host: host port: port [
 	"self exampleURL: 'http://www.gnu.org' host: 'www.gnu.org' port: 80."
 
@@ -125,11 +135,6 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 '>
     <category: 'NetClients-HTTP'>
 
-    HTTPProtocolInterpreter class >> defaultPortNumber [
-	<category: 'private-attributes'>
-	^80
-    ]
-
     HTTPProtocolInterpreter class >> defaultResponseClass [
 	<category: 'private-attributes'>
 	^HTTPResponse
@@ -207,7 +212,7 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 		totalByte := totalByte value trimSeparators asInteger.
 		self reporter totalByte: totalByte].
 	self reporter startTransfer.
-	readStream := connectionStream stream.
+	readStream := self connectionStream stream.
 	response preReadBytes isEmpty 
 	    ifFalse: 
 		[self reporter readByte: response preReadBytes size.
@@ -288,7 +293,7 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 	    cr.
 	self putRequestHeaders: requestHeaders.
 	binary 
-	    ifTrue: [connectionStream stream nextPutAll: data]
+	    ifTrue: [self connectionStream stream nextPutAll: data]
 	    ifFalse: [self nextPutAll: data].
 	^self readResponseInto: aStream
     ]
@@ -514,9 +519,8 @@ Copyright (c) Kazuki Yasumatsu, 1995. All rights reserved.
 	self parseStatusLine: aClient.
 	messageHeaderParser := MIME.MimeEntity parser on: aClient connectionStream.
 	messageHeader parseFieldsFrom: messageHeaderParser.
-
-	"Empty the lookahead buffer of the parser"
-	preReadBytes := String with: messageHeaderParser next
+	messageHeaderParser assertNoLookahead.
+	preReadBytes := #().
     ]
 
     printOn: aStream [

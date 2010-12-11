@@ -1,7 +1,7 @@
 GtkConcreteWidget subclass: GtkClassBrowserWidget [
     GtkClassBrowserWidget class [ | Undo | ]
 
-    | checkCode namespaceWidget classWidget classHierarchyWidget classHierarchyUpdate iCategoryWidget iMethodWidget cCategoryWidget cMethodWidget classAndInstanceSide codeWidget history historyUpdate state |
+    | launcher checkCode namespaceWidget classWidget classHierarchyWidget classHierarchyUpdate iCategoryWidget iMethodWidget cCategoryWidget cMethodWidget classAndInstanceSide codeWidget historyStack state |
 
     GtkClassBrowserWidget class >> title [
 	<category: 'accessing'>
@@ -17,40 +17,36 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
 				    yourself ]
     ]
 
+    launcher: aGtkLauncher [
+        <category: 'accessing'>
+
+        launcher := aGtkLauncher
+    ]
+    
+    launcher [
+	<category: 'accessing'>
+
+	^ launcher
+    ]
+
     buildBrowser [
 
-	^ GTK.GtkHPaned new
-	    pack1: self buildCategoryClassesAndHierarchy resize: true shrink: false;
-	    pack2: self buildProtocolAndMethod resize: true shrink: false;
-	    showAll;
-	    yourself
+	^ GTK.GtkHPaned addAll: {self buildCategoryClassesAndHierarchy. self buildProtocolAndMethod}
     ]
 
     buildCategoryAndClass [
 
-	^ GTK.GtkHPaned new
-	    pack1: self buildNamespaceView resize: true shrink: false;
-            pack2: self buildClassView resize: true shrink: false;
-	    showAll;
-	    yourself
+	^ GTK.GtkHPaned addAll: {self buildNamespaceView. self buildClassView}
     ]
 
     buildClassBrowser [
 
-	^ GTK.GtkHPaned new
-            pack1: self buildClassCategoryView resize: true shrink: false;
-            pack2: self buildClassMethodView resize: true shrink: false;
-	    showAll;
-	    yourself
+	^ GTK.GtkHPaned addAll: {self buildClassCategoryView. self buildClassMethodView}
     ]
 
     buildInstanceBrowser [
 
-	^ GTK.GtkHPaned new
-	    pack1: self buildInstanceCategoryView resize: true shrink: false;
-	    pack2: self buildInstanceMethodView resize: true shrink: false;
-	    showAll;
-	    yourself
+	^ GTK.GtkHPaned addAll: {self buildInstanceCategoryView. self buildInstanceMethodView}
     ]
 
     buildProtocolAndMethod [
@@ -60,7 +56,7 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
 	    appendPage: self buildClassBrowser tabLabel: (GTK.GtkLabel new: 'Class');
 	    showAll;
 	    setCurrentPage: 0;
-	    connectSignal: 'switch-page' to: self selector: #'classInstanceSwitchOn:page:number:' userData: nil;
+	    connectSignal: 'switch-page' to: self selector: #'classInstanceSwitchOn:page:number:';
 	    yourself
     ]
 
@@ -71,28 +67,22 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
 	    appendPage: self buildHierarchy tabLabel: (GTK.GtkLabel new: 'Hierarchy');
 	    showAll;
 	    setCurrentPage: 0;
-	    connectSignal: 'switch-page' to: self selector: #'namespaceHierarchySwitchOn:page:number:' userData: nil;
+	    connectSignal: 'switch-page' to: self selector: #'namespaceHierarchySwitchOn:page:number:';
 	    yourself
     ]
 
     buildNamespaceView [
 	<category: 'user interface'>
 
-	namespaceWidget := GtkCategorizedNamespaceWidget showAll
-				whenSelectionChangedSend: #onNamespaceChanged to: self;
-				yourself.
-
-	^ namespaceWidget mainWidget
+	^ (namespaceWidget := self buildWidget: GtkCategorizedNamespaceWidget whenSelectionChangedSend: #onNamespaceChanged)
+	    mainWidget
     ]
 
     buildClassView [
 	<category: 'user interface'>
 
-	classWidget := GtkCategorizedClassWidget showAll
-			    whenSelectionChangedSend: #onClassChanged to: self;
-			    yourself.
-
-	^ classWidget mainWidget
+	^ (classWidget := self buildWidget: GtkCategorizedClassWidget whenSelectionChangedSend: #onClassChanged)
+	    mainWidget
     ]
 
     buildCodeView [
@@ -106,81 +96,99 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
 	^ codeWidget mainWidget
     ]
 
+    buildWidget: aClass whenSelectionChangedSend: aSymbol [
+	<category: 'user interface'>
+
+	^ aClass showAll
+                whenSelectionChangedSend: aSymbol to: self;
+                yourself
+    ]
+
     buildHierarchy [
 	<category: 'user interface'>
 
-	classHierarchyWidget := GtkClassHierarchyWidget showAll
-				    whenSelectionChangedSend: #onClassHierarchyChanged to: self;
-				    yourself.
-
-	^ classHierarchyWidget mainWidget
+	^ (classHierarchyWidget := self buildWidget: GtkClassHierarchyWidget whenSelectionChangedSend: #onClassHierarchyChanged)
+	    mainWidget
     ]
 
     buildInstanceCategoryView [
         <category: 'user interface'>
 
-        iCategoryWidget := GtkCategoryWidget showAll
-                            whenSelectionChangedSend: #onInstanceSideCategoryChanged to: self;
-                            yourself.
-
-        ^ iCategoryWidget mainWidget
+        ^ (iCategoryWidget := self buildWidget: GtkCategoryWidget whenSelectionChangedSend: #onInstanceSideCategoryChanged)
+	    mainWidget
     ]
 
     buildClassCategoryView [
 	<category: 'user interface'>
 
-	cCategoryWidget := GtkCategoryWidget showAll
-			    whenSelectionChangedSend: #onClassSideCategoryChanged to: self;
-			    yourself.
-
-	^ cCategoryWidget mainWidget
+	^ (cCategoryWidget := self buildWidget: GtkCategoryWidget whenSelectionChangedSend: #onClassSideCategoryChanged)
+	    mainWidget
     ]
 
     buildClassMethodView [
 	<category: 'user interface'>
 
-	cMethodWidget := GtkMethodWidget showAll
-			    whenSelectionChangedSend: #onClassSideMethodChanged to: self;
-			    yourself.
-
-	^ cMethodWidget mainWidget
+	^ (cMethodWidget := self buildWidget: GtkMethodWidget whenSelectionChangedSend: #onClassSideMethodChanged)
+            browser: self;
+	    mainWidget
     ]
 
     buildInstanceMethodView [
         <category: 'user interface'>
 
-        iMethodWidget := GtkMethodWidget showAll
-                            whenSelectionChangedSend: #onInstanceSideMethodChanged to: self;
-                            yourself.
+        ^ (iMethodWidget := self buildWidget: GtkMethodWidget whenSelectionChangedSend: #onInstanceSideMethodChanged)
+            browser: self;
+	    mainWidget
+    ]
 
-        ^ iMethodWidget mainWidget
+    buildBrowserPaned [
+        <category: 'user interface'>
+
+	^ GTK.GtkVPaned new
+	    pack1: self buildBrowser resize: true shrink: false;
+	    pack2: self buildCodeView resize: true shrink: true ;
+	    showAll;
+	    yourself
     ]
 
     initializeHistory [
 	<category: 'initialize-release'>
 
-	historyUpdate := true.
-	history := HistoryStack new
-		    initialize: self;
-		    yourself
+	historyStack := HistoryStack new
+            initialize: self;
+            yourself
     ]
 
     initialize [
 	<category: 'initialize-release'>
 
-	| vpaned |
 	state := NamespaceState on: self with: Smalltalk.
+	state classCategory: Smalltalk category.
 	classHierarchyUpdate := false.
 	checkCode := true.
-	vpaned := GTK.GtkVPaned new.
 
-	self mainWidget: vpaned.
-	self initializeHistory.
- 
-	vpaned
-	    pack1: self buildBrowser resize: true shrink: false;
-	    pack2: self buildCodeView resize: true shrink: true ;
-	    showAll
+	self 
+	    initializeHistory;
+	    mainWidget: self buildBrowserPaned
+    ]
+
+    postInitialize [
+	<category: 'initialize'>
+
+	codeWidget postInitialize
+    ]
+
+    updateHistory: aClass [
+	<category: 'history'>
+
+        historyStack push: aClass.
+        launcher isNil ifFalse: [ launcher historyChanged ]
+    ]
+
+    historyStack [
+	<category: 'history'>
+
+        ^historyStack
     ]
 
     grabFocus [
@@ -199,113 +207,60 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
     classInstanceSwitchOn: aGtkNotebook page: aGtkNotebookPage number: aSmallInteger [
 	<category: 'events'>
 
-	self checkCodeWidget.
-	aSmallInteger = 0 
-	    ifTrue: [
-		iMethodWidget hasSelectedMethod 
-		    ifTrue: [ codeWidget sourceCode: iMethodWidget sourceCode ]
-		    ifFalse: [ codeWidget clearCode ] ]
-	    ifFalse: [
-                cMethodWidget hasSelectedMethod
-                    ifTrue: [ codeWidget sourceCode: cMethodWidget sourceCode ]
-                    ifFalse: [ codeWidget clearCode ] ]
+	self checkCodeWidgetAndUpdate: [
+	    aSmallInteger = 0 
+		ifTrue: [
+		    iMethodWidget hasSelectedMethod 
+			ifTrue: [ codeWidget sourceCode: iMethodWidget sourceCode ]
+			ifFalse: [ codeWidget clear ] ]
+		ifFalse: [
+		    cMethodWidget hasSelectedMethod
+			ifTrue: [ codeWidget sourceCode: cMethodWidget sourceCode ]
+			ifFalse: [ codeWidget clear ] ] ]
     ]
 
     onNamespaceChanged [
 	<category: 'events'>
 
-	| namespace |
-	self checkCodeWidget.
-	namespaceWidget hasSelectedNamespace ifFalse: [ ^ self ].
-	namespace := namespaceWidget selectedNamespace.
-	classWidget namespace: namespace category: namespaceWidget selectedCategory.
-
-	classHierarchyUpdate ifFalse: [ classHierarchyWidget emptyModel ].
-	iCategoryWidget emptyModel.
-	cCategoryWidget emptyModel.
-	iMethodWidget emptyModel.
-	cMethodWidget emptyModel.
-	codeWidget namespaceDefinition: (NamespaceSource on: namespace).
-	state := NamespaceState on: self with: namespace
+	self updateState: namespaceWidget state
     ]
 
     onClassChanged [
 	<category: 'events'>
 
-        | aClass |
-	self checkCodeWidget.
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
-	aClass := classWidget selectedClass.
-	classHierarchyUpdate ifFalse: [ classHierarchyWidget classOrMeta: aClass ].
-	iCategoryWidget classOrMeta: aClass.
-	cCategoryWidget classOrMeta: aClass class.
-	iCategoryWidget unselectAll.
-        cCategoryWidget unselectAll.
-
-	historyUpdate ifTrue: [ history push: aClass ].
-
-	iMethodWidget emptyModel.
-        cMethodWidget emptyModel.
-	codeWidget classDefinition: (ClassSource displayHeaderOf: aClass).
-	state := ClassState on: self with: aClass
+	self updateState: classWidget state
     ]
 
     onClassHierarchyChanged [
 	<category: 'events'>
 
-	| aClass |
-	self checkCodeWidget.
-	classHierarchyWidget hasSelectedClass ifFalse: [ ^ self ].
-	classHierarchyUpdate := true.
-        aClass := classHierarchyWidget selectedClass.
-	namespaceWidget selectANamespace: aClass environment.
-	classWidget selectAClass: aClass.
-	classHierarchyUpdate := false
+	[classHierarchyUpdate := true.
+	self updateState: classHierarchyWidget state]
+	    ensure: [classHierarchyUpdate := false ]
     ]
 
     onInstanceSideCategoryChanged [
 	<category: 'events'>
 
-	| category |
-	self checkCodeWidget.
-	iCategoryWidget hasSelectedCategory ifFalse: [ ^ self ].
-	iMethodWidget class: classWidget selectedClass withCategory: iCategoryWidget selectedCategory.
-
-	codeWidget clearCode.
-	state := CategoryState on: self with: classWidget selectedClass -> iCategoryWidget selectedCategory
+	self updateState: iCategoryWidget state
     ]
 
     onClassSideCategoryChanged [
 	<category: 'events'>
 
-	self checkCodeWidget.
-	cCategoryWidget hasSelectedCategory ifFalse: [ ^ self ].
-	cMethodWidget class: classWidget selectedClass class withCategory: cCategoryWidget selectedCategory.
-
-	codeWidget clearCode.
-	state := CategoryState on: self with: classWidget selectedClass class -> cCategoryWidget selectedCategory
+	self updateState: cCategoryWidget state
     ]
 
     onInstanceSideMethodChanged [
 	<category: 'events'>
 
-	| method |
-	self checkCodeWidget.
-	iMethodWidget hasSelectedMethod ifFalse: [ ^ self ].
-	method := iMethodWidget selectedMethod.
-	codeWidget sourceCode: iMethodWidget sourceCode.
-	state := MethodState on: self with: classWidget selectedClass -> method
+	self updateState: iMethodWidget state
     ]
 
     onClassSideMethodChanged [
 	<category: 'events'>
 
-	| method |
-	self checkCodeWidget.
-	cMethodWidget hasSelectedMethod ifFalse: [ ^ self ].
-	method := cMethodWidget selectedMethod.
-	codeWidget sourceCode: cMethodWidget sourceCode.
-	state := MethodState on: self with: classWidget selectedClass class -> method
+	self updateState: cMethodWidget state
     ]
 
     undoStack [
@@ -317,9 +272,7 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
     cancel [
 	<category: 'edit events'>
 
-	codeWidget hasFocus 
-	    ifTrue: [ codeWidget cancel ]
-	    ifFalse: [ self undoStack undo ]
+	codeWidget hasFocus ifTrue: [ ^codeWidget cancel ]
     ]
 
     undo [
@@ -341,83 +294,15 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
     acceptIt [
 	<category: 'smalltalk events'>
 
-        | categoryWidget |
-	namespaceWidget hasSelectedNamespace ifFalse: [ ^ self ].
-	categoryWidget := self viewedCategoryWidget.
-        categoryWidget hasSelectedCategory ifFalse: [ ^ self acceptClassDefinition ].
-	self newMethod
-    ]
-    
-    acceptClassDefinitionOn: aNamespace [
-	<category: 'class event'>
-
-	codeWidget codeSaved.
-        Namespace current: aNamespace.
-        ^ (ReadStream on: codeWidget sourceCode) fileIn
-    ]
-
-    acceptClassDefinition [
-	<category: 'class event'>
-
-	^ self 
-	    acceptClassDefinitionOn: (namespaceWidget hasSelectedNamespace
-					ifTrue: [ namespaceWidget selectedNamespace ]
-					ifFalse: [ Smalltalk ]).
-    ]
-
-    acceptClassDefinitionForState: aState [
-        <category: 'class event'>
-
-        ^ self acceptClassDefinitionOn: aState namespace 
+        AcceptItCommand on: self
     ]
 
     fileoutNamespace [
 	<category: 'namespace events'>
 
-	namespaceWidget hasSelectedNamespace ifFalse: [ ^ self ].
-	FileoutNamespaceCommand on: namespaceWidget selectedNamespace
+	FileoutNamespaceCommand on: self
     ]
 
-    fileoutNamespace: aDirectory [
-	<category: 'namespace events'>
-
-	| namespace stream |
-	namespaceWidget hasSelectedNamespace ifFalse: [ ^ self ].
-	namespace := namespaceWidget selectedNamespace.
-	self fileoutNamespace: namespace on: (File name: aDirectory) / namespace name
-    ]
-
-    fileoutNamespace: aNamespace on: aDirectory [
-	<category: 'namespace events'>
-
-	| stream |
-	aDirectory exists ifFalse: [ aDirectory createDirectory ].
-	stream := FileStream open: (aDirectory / 'self.st') asString mode: FileStream write.
-	(NamespaceSource write: aNamespace on: stream)
-                header.
-	aNamespace do: [ :each |
-	    (each isNil not and: [ each isClass and: [ each environment = aNamespace ] ])
-		    ifTrue: [ stream := FileStream open: (aDirectory / ((each name asString) , '.st')) asString mode: FileStream write.
-			    (ClassSource write: each on: stream)
-				source ] ].
-	aNamespace allSubspacesDo: [ :space |
-            | dir |
-            dir := (aDirectory / space name).
-	    self fileoutNamespace: space on: dir ]
-    ]
-
-    hasSelectedNamespace [
-	<category: 'testing'>
-
-	^ namespaceWidget hasSelectedNamespace
-    ]
-
-    selectedNamespace [
-	<category: 'testing'>
-
-	^ namespaceWidget selectedNamespace
-    ]
- 
     newNamespace [
 	<category: 'namespace events'>
 
@@ -439,26 +324,13 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
     inspectNamespace [
 	<category: 'namespace events'>
 
-	namespaceWidget hasSelectedNamespace ifFalse: [ ^ self ].
-	GtkInspector openOn: namespaceWidget selectedNamespace
+	InspectNamespaceCommand on: self
     ]
 
     fileoutClass [
 	<category: 'class events'>
     
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-	FileoutClassCommand on: classWidget selectedClass
-    ]
-
-    fileoutClass: aFile [
-        <category: 'class events'>
-
-        | class stream |
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-        class := classWidget selectedClass.
-        stream := FileStream open: aFile mode: FileStream write.
-        (ClassSource write: class on: stream)
-	    source
+	FileoutClassCommand on: classWidget
     ]
 
     extractNamespaceFrom: aNamespace [
@@ -471,18 +343,6 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
             list addFirst: namespace displayString.
             namespace := namespace superspace ].
 	^ list
-    ]
-
-    hasSelectedClass [
-	<category: 'accessing'>
-
-	^ classWidget hasSelectedClass
-    ]
-
-    selectedClass [
-	<category: 'accessing'>
-
-	^ classWidget selectedClass
     ]
 
     newClass [
@@ -506,19 +366,7 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
     inspectClass [
 	<category: 'class events'>
 
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
-	GtkInspector openOn: classWidget selectedClass
-    ]
-
-    classOrMetaSelected [
-	<category: 'class accessing'>
-
-	| class |
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
-	class := classWidget selectedClass.
-	^ classAndInstanceSide getCurrentPage = 0
-            ifTrue: [ class ]
-            ifFalse: [ class class ]	
+	InspectClassCommand on: self
     ]
 
     viewedCategoryWidget [
@@ -538,61 +386,19 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
     fileoutCategory [
         <category: 'category events'>
 
-        | categoryWidget |
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-        categoryWidget := self viewedCategoryWidget.
-        categoryWidget hasSelectedCategory ifFalse: [ ^ self ].
-	FileoutCategoryCommand on: self classOrMetaSelected categorized: categoryWidget selectedCategory
-    ]
-
-    fileoutCategory: aFile [
-        <category: 'category events'>
-
-        | categoryWidget stream |
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-        categoryWidget := self viewedCategoryWidget.
-        categoryWidget hasSelectedCategory ifFalse: [ ^ self ].
-	stream := FileStream open: aFile mode: FileStream write.
-	(CategorySource write: categoryWidget selectedCategory of: self classOrMetaSelected on: stream)
-	    source
-    ]
-
-    hasSelectedCategory [
-	<category: 'testing'>
-	
-	^ self viewedCategoryWidget hasSelectedCategory
-    ]
-
-    selectedCategory [
-	<category: 'accessing'>
-
-	^ self viewedCategoryWidget selectedCategory
+	self viewedCategoryWidget fileoutCategory
     ]
 
     newCategory [
         <category: 'category events'>
 
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
 	AddCategoryCommand on: self
     ]
 
     renameCategory [
         <category: 'category events'>
 
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
 	RenameCategoryCommand on: self
-    ]
-
-    deleteCategory [
-        <category: 'category events'>
-
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
-	DeleteCategoryCommand on: self
-    ]
-
-    inspectCategory [
-        <category: 'category events'>
-
     ]
 
     viewedMethodWidget [
@@ -603,99 +409,180 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
             ifFalse: [ cMethodWidget ]
    ]
 
-    viewedMethodModel [
-        <category: 'category events'>
-
-        ^ classAndInstanceSide getCurrentPage = 0
-            ifTrue: [ GtkMethodModel currentOn: classWidget selectedClass withCategory: iCategoryWidget selectedCategory ]
-            ifFalse: [ GtkMethodModel currentOn: classWidget selectedClass class withCategory: cCategoryWidget selectedCategory ]
-    ]
-
-    hasSelectedMethod [
-	<category: 'testing'>
-
-	^ self viewedMethodWidget hasSelectedMethod
-    ]
-
-    selectedMethodSymbol [
-	<category: 'accessing'>
-
-	^ self viewedMethodWidget selectedMethodSymbol
-    ]
-
     sourceCode [
 	<category: 'accessing'>
 
 	^ codeWidget sourceCode
     ]
 
+    compileError: aString line: line [
+        <category: 'method events'>
+
+        codeWidget compileError: aString line: line
+    ]
+
     newMethod [
 	<category: 'method events'>
 
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
-	AddMethodCommand on: self.
+	AcceptItCommand on: self.
     ]
 
     deleteMethod [
 	<category: 'method events'>
 
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
 	DeleteMethodCommand on: self
     ]
 
     inspectMethod [
 	<category: 'method events'>
 
-	| methodWidget |
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
-	methodWidget := self viewedMethodWidget.
-        GtkInspector openOn: methodWidget selectedMethod
+	InspectMethodCommand on: self
     ]
 
     fileoutMethod [
 	<category: 'method events'>
 
-        | methodWidget stream |
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-        methodWidget := self viewedMethodWidget.
-	FileoutMethodCommand on: methodWidget selectedMethod
+	FileoutMethodCommand on: self
     ]
 
-    fileoutMethod: aFile [
-	<category: 'method events'>
+    selectedNamespace [
+	<category: 'selection'>
 
-        | methodWidget stream |
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-        methodWidget := self viewedMethodWidget.
-        stream := FileStream open: aFile mode: FileStream write.
-        (MethodSource write: methodWidget selectedMethod on: stream)
-            source
+	^ namespaceWidget selectedNamespace
+    ]
+
+    selectedClassCategory [
+	<category: 'selection'>
+
+	^ namespaceWidget selectedCategory
+    ]
+
+    clearClass [
+	<category: 'private-selection'>
+
+	classWidget clear
+    ]
+
+    clearCategories [
+	<category: 'private-selection'>
+
+        iCategoryWidget clear.
+        cCategoryWidget clear
+    ]
+
+    clearMethods [
+	<category: 'private-selection'>
+
+        iMethodWidget clear.
+        cMethodWidget clear
+    ]
+
+    displayNamespaceSource: aNamespace [
+	<category: 'private-selection'>
+
+        codeWidget namespaceDefinition: (NamespaceSource on: aNamespace)
+    ]
+
+    displayClassSource: aClass [
+	<category: 'private-selection'>
+
+	codeWidget classDefinition: (ClassSource displayHeaderOf: aClass).
+    ]
+
+    displayMethodSource: aString [
+	<category: 'private-selection'>
+
+	codeWidget sourceCode: aString
+    ]
+
+    clearSource [
+	<category: 'private-selection'>
+
+	codeWidget clear
+    ]
+
+    updateNamespaceWidget: aNamespace [
+	<category: 'private-selection'>
+
+	namespaceWidget selectANamespace: aNamespace.
+        classWidget namespace: aNamespace category: ''.
+        classHierarchyWidget emptyModel
+    ]
+
+    updateClassWidget: aClass [
+	<category: 'private-selection'>
+
+        classWidget selectAClass: aClass class.
+	classHierarchyWidget classOrMeta: aClass class
+    ]
+
+    updateClassHierarchyWidget [
+	<category: 'private-selection'>
+
+        namespaceWidget selectedNamespace ~= classHierarchyWidget selectedClass environment
+                                                    ifTrue: [ namespaceWidget selectANamespace: classHierarchyWidget selectedClass environment ]
+                                                    ifFalse: [ (namespaceWidget selectedCategory fullname ~= '' and: [ namespaceWidget selectedCategory ~= classHierarchyWidget selectedClass asClass classCategory ])
+                                                                                        ifTrue: [ namespaceWidget selectANamespace: classHierarchyWidget selectedClass environment ] ].
+        classWidget selectAClass: classHierarchyWidget selectedClass class
+    ]
+
+    updateCategoryWidget: aClass [
+	<category: 'private-selection'>
+
+        iCategoryWidget classOrMeta: aClass.
+        cCategoryWidget classOrMeta: aClass class
+    ]
+
+    updateNamespaceOfClass: aNamespace classCategory: aClassCategory [
+	<category: 'private-selection'>
+
+	classWidget namespace: aNamespace category: aClassCategory fullname.
+	classHierarchyUpdate ifFalse: [ classHierarchyWidget emptyModel ].
+	self
+	    clearCategories;
+	    clearMethods
+    ]
+
+    updateClassOfCategory: aClass [
+	<category: 'private-selection'>
+
+        classHierarchyUpdate ifFalse: [ classHierarchyWidget classOrMeta: aClass ].
+        self
+	    updateCategoryWidget: aClass;
+	    updateHistory: aClass;
+	    clearMethods
+	
+    ]
+
+    updateInstanceSideMethodCategory: aString [
+	<category: 'private-selection'>
+
+        iMethodWidget class: classWidget selectedClass withCategory: aString
+    ]
+
+    updateClassSideMethodCategory: aString [
+        <category: 'private-selection'>
+
+        cMethodWidget class: classWidget selectedClass class withCategory: aString
     ]
 
     selectANamespace: aNamespace [
 	<Category: 'selection'>
 
-	namespaceWidget selectANamespace: aNamespace.
-        classWidget namespace: aNamespace.
-
-        classHierarchyWidget emptyModel.
-        iCategoryWidget emptyModel.
-        cCategoryWidget emptyModel.
-        iMethodWidget emptyModel.
-        cMethodWidget emptyModel.
-        codeWidget namespaceDefinition: (NamespaceSource on: aNamespace)
+	self
+	    updateNamespaceWidget: aNamespace;
+	    clearCategories;
+	    clearMethods;
+	    displayNamespaceSource: aNamespace
     ]
 
     selectAClass: aClass [
 	<category: 'selection'>
 
-        classWidget selectAClass: aClass.
-	classHierarchyWidget classOrMeta: aClass.
-        iCategoryWidget classOrMeta: aClass.
-        cCategoryWidget classOrMeta: aClass class.
-
-        iMethodWidget emptyModel.
-        cMethodWidget emptyModel
+	self 
+	    updateClassWidget: aClass;
+	    updateCategoryWidget: aClass;
+	    clearMethods
     ]
 
     select: aSelector in: aMethodWidget withCategory: aCategoryWidget [
@@ -712,7 +599,7 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
             aMethodWidget
                 class: class withCategory: (class compiledMethodAt: aSelector) methodCategory ].
 
-	aMethodWidget selectAMethod: aSelector asString
+	aMethodWidget selectAMethod: aSelector
     ]
 
     selectAnInstanceMethod: aSelector [
@@ -729,76 +616,72 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
 	classAndInstanceSide setCurrentPage: 1
     ]
 
+    targetObject [
+        <category: 'target'>
+
+        ^ state classOrMeta
+    ]
+
+    doIt: object [
+	<category: 'smalltalk event'>
+
+	codeWidget doIt: object
+    ]
+
+    debugIt: object [
+	<category: 'smalltalk event'>
+
+        codeWidget debugIt: object
+    ]
+
+    inspectIt: object [
+	<category: 'smalltalk event'>
+
+        codeWidget inspectIt: object
+    ]
+
+    printIt: object [
+	<category: 'smalltalk event'>
+
+        codeWidget printIt: object
+    ]
+
     doIt [
 	<category: 'smalltalk event'>
 
-	| class |
-	classWidget hasSelectedClass ifFalse: [ ^ self ].
-
-	class := classWidget selectedClass.
-
-	codeWidget 
-	    object: class;
-	    doIt
+	DoItCommand on: self
     ]
 
     debugIt [
 	<category: 'smalltalk event'>
 
-        | class |
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-
-        class := classWidget selectedClass.
-
-        codeWidget
-            object: class;
-            debugIt
+	DebugItCommand on: self
     ]
 
     inspectIt [
 	<category: 'smalltalk event'>
 
-        | class |
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-
-        class := classWidget selectedClass.
-
-        codeWidget
-            object: class;
-	    inspectIt
+	InspectItCommand on: self
     ]
 
     printIt [
 	<category: 'smalltalk event'>
 
-        | class |
-        classWidget hasSelectedClass ifFalse: [ ^ self ].
-
-        class := classWidget selectedClass.
-
-        codeWidget
-            object: class;
-            printIt
+	PrintItCommand on: self
     ]
 
     forward [
 	<category: 'history events'>
 
-	history next
+	historyStack next.
+        launcher isNil ifFalse: [ launcher historyChanged ]
     ]
 
     back [
 	<category: 'history events'>
 
-	history previous
-    ]
-
-    updateClass: aClass [
-	<category: 'history events'>
-
-	historyUpdate := false.
-	self selectAClass: aClass.
-	historyUpdate := true.
+	historyStack previous.
+        launcher isNil ifFalse: [ launcher historyChanged ]
     ]
 
     sourceCodeWidgetHasFocus [
@@ -830,7 +713,19 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
 
 	codeWidget selectAll
     ]
-   
+ 
+    hasSelection [
+	<category:'text testing'>
+
+	^ codeWidget hasSelection
+    ]
+ 
+    selectedMethodSymbol [
+        <category: 'text editing'>
+
+        ^codeWidget selectedMethodSymbol
+    ]
+
     selectedText [
 	<category: 'text editing'>
 
@@ -843,45 +738,59 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
 	checkCode := false
     ]
 
-    checkCodeWidget [
-	<category: 'text editing'>
+    checkCodeWidgetAndUpdate: aBlock [
+        <category: 'text editing'>
 
-	checkCode ifFalse: [ checkCode := true. ^ self ].
-	self hasChanged ifFalse: [ codeWidget clearUndo. ^ self ].
-	self saveCodeOnSave: [ self saveCode ].
-	codeWidget clearUndo
+        self saveCodeOr: [ self clearUndo. aBlock value ]
     ]
 
-    saveCodeOnSave: saveEvent [
+    saveCodeOr: dropBlock [
         <category: 'saving'>
 
         | dialog |
+        checkCode ifFalse: [ checkCode := true. dropBlock value. ^ self ].
+        self hasChanged ifFalse: [ dropBlock value. ^ self ].
         dialog := GTK.GtkMessageDialog
                                 new: self parentWindow
                                 flags: GTK.Gtk gtkDialogDestroyWithParent
                                 type: GTK.Gtk gtkMessageWarning
                                 buttons: GTK.Gtk gtkButtonsNone
-                                message: 'Save the code before exiting?'
-                                tip: 'If you do not save, your changes to %1 will be lost...' % {self stateString}.
+                                message: 'Accept changes before exiting?'
+                                tip: 'If you do not accept them, your changes to %1 will be lost...' % {self state}.
 
         dialog
-            addButton: 'Cancel' responseId: 0;
-            addButton: 'Save' responseId: 1;
+            addButton: 'Drop' responseId: 0;
+            addButton: 'Cancel' responseId: 2;
+            addButton: 'Accept' responseId: 1;
             showModalOnAnswer: [ :dlg :res |
-                res = 1 ifTrue: saveEvent.
+                res = 1 ifTrue: [ self acceptIt ].
+                res <= 1 ifTrue: dropBlock.
                 dlg destroy ].
     ]
 
-    stateString [
+    state [
 	<category: 'accessing'>
 
-	^ state displayString
+	^ state
     ]
 
-    saveCode [
-	<category: 'text saving'>
+    updateState: newState [
+	<category: 'accessing'>
+        newState isNil ifTrue: [^self].
+        self checkCodeWidgetAndUpdate: [ self state: newState ]
+    ]
 
-	state saveSource
+    state: aState [
+	<category: 'accessing'>
+
+        aState updateBrowser: self.
+	state := aState
+    ]
+
+    clearUndo [
+	<category: 'code saved'>
+
+	codeWidget clearUndo
     ]
 
     codeSaved [
@@ -893,13 +802,25 @@ GtkConcreteWidget subclass: GtkClassBrowserWidget [
     close [
 	<category: 'user interface'>
 
-	self checkCodeWidget
+	self checkCodeWidgetAndUpdate: []
     ]
 
     hasChanged [
 	<category: 'testing'>
 
 	^ codeWidget hasChanged
+    ]
+
+    showFind [
+	<category: 'user interface'>
+
+	codeWidget showFind
+    ]
+
+    showReplace [
+	<category: 'user interface'>
+
+	codeWidget showReplace
     ]
 ]
 

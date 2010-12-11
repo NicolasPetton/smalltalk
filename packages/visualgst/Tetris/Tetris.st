@@ -28,7 +28,7 @@
  ======================================================================"
 
 GtkMainWindow subclass: Tetris [
-    | canvasWidget canvas pause delay grid movingBlocks level score level lines |
+    | canvasWidget canvas process pause delay grid movingBlocks level score level lines |
     
     <category: 'Graphics-Tetris'>
     <comment: nil>
@@ -54,47 +54,43 @@ GtkMainWindow subclass: Tetris [
     initialize [
 	<category: 'initialization'>
 
-	super initialize.
 	movingBlocks := false.
-	self 
-	    title: 'Tetris';
-	    createMenus;
-	    createStatusBar;
-	    centralWidget: self buildCentralWidget
+	super initialize.
+    ]
+
+    windowTitle [
+	<category: 'initialization'>
+
+	^'Tetris'
     ]
 
     postInitialize [
 	<category: 'initialization'>
 
-	canvasWidget grabFocus.
+	super postInitialize.
+        canvasWidget grabFocus.
 	window
-	    connectSignal: 'key-press-event' to: self selector: #'keyPressedOn:keyEvent:' userData: nil
+	    connectSignal: 'key-press-event' to: self selector: #'keyPressedOn:keyEvent:'
     ]
 
-    createGameMenus [
-        <category: 'user interface'>
+    onDelete [
+	<category: 'windows event'>
 
-        ^ self createNewMenuEntry: {}
+	self quit.
+	^ true
     ]
 
     createHelpMenus [
         <category: 'user interface'>
 
-        ^ self createNewMenuEntry: {GTK.GtkMenuItem menuItem: 'About Tetris' connectTo: self selector: #aboutLauncher.
+        ^{GTK.GtkMenuItem menuItem: 'About Tetris' connectTo: self selector: #aboutLauncher.
             GTK.GtkMenuItem menuItem: 'About GNU Smalltalk' connectTo: self selector: #aboutGst}
     ]
 
     createMenus [
         <category: 'user interface'>
 
-        self createMainMenu: {#('Game' #createGameMenus).
-            #('Help' #createHelpMenus)}
-    ]
-
-    createStatusBar [
-        <category: 'user interface'>
-
-        self statusMessage: 'GST-Tetris'
+        self createMainMenu: #(#('Help' #createHelpMenus))
     ]
 
     buildCentralWidget [
@@ -102,7 +98,7 @@ GtkMainWindow subclass: Tetris [
 	
 	^ canvasWidget := GTK.GtkDrawingArea new
 	    setSizeRequest: 400 height: 700;
-	    connectSignal: 'expose_event' to: self selector: #'expose:event:' userData: nil;
+	    connectSignal: 'expose_event' to: self selector: #'expose:event:';
 	    yourself
     ]
 
@@ -170,14 +166,15 @@ GtkMainWindow subclass: Tetris [
 
     expose: aGtkWidget event: aGdkEventExpose [
 	<category: 'drawing event'>
-        aGtkWidget getWindow withContextDo: [ :cr |
+
+	aGtkWidget getWindow withContextDo: [ :cr |
             canvas := cr.
             self
                 clearArea: aGtkWidget getAllocation;
-	        drawArea;
-	        drawGrid;
-	        drawScore.
-	].
+		drawArea;
+		drawGrid;
+		drawScore ].
+
         ^ true
     ]
 
@@ -240,10 +237,16 @@ GtkMainWindow subclass: Tetris [
     play [
 	<category: 'game'>
 
-	[ self
-	    initializeGame;
-	    cycle ] fork"At: Processor lowestPriority".
-	Processor activeProcess suspend
+	process := [ self
+			initializeGame;
+			cycle ] fork.
+    ]
+
+    quit [
+	<category: 'game'>
+
+	process terminate.
+	window hideAll
     ]
 
     gameOver [
