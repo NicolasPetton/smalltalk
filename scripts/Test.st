@@ -28,19 +28,21 @@
 |
  ======================================================================"
 
-Smalltalk arguments isEmpty ifTrue: [ ObjectMemory quit ]!
-PackageLoader fileInPackage: 'SUnit'!
+Eval [
+    Smalltalk arguments isEmpty ifTrue: [ ObjectMemory quit ]
+	PackageLoader fileInPackage: 'SUnit']
 
-| helpString verbose package coverage ceverageResult script suite result quiet |
-quiet := false.
-verbose := false.
-FileStream verbose: false.
-coverage := false.
-script := ''.
-package := ''.
+Eval [
+    | helpString verbose package coverage ceverageResult script suite result quiet |
+    quiet := false.
+    verbose := false.
+    FileStream verbose: false.
+    coverage := false.
+    script := ''.
+    package := ''.
 
 
-helpString :=
+    helpString :=
 'Usage:
     gst-sunit [ flag ... ] class.tests ...
 
@@ -58,77 +60,77 @@ Options:
 '.
 
 "Parse the command-line arguments."
-Smalltalk
-    arguments: '-h|--help -q|--quiet -v|-V|--verbose -f|--file: -c|--code-coverage -p|--package: -I|--image-file: --kernel-directory: --version'
-    do: [ :opt :arg |
+    Smalltalk
+	arguments: '-h|--help -q|--quiet -v|-V|--verbose -f|--file: -c|--code-coverage -p|--package: -I|--image-file: --kernel-directory: --version'
+	do: [ :opt :arg |
 
-    opt = 'help' ifTrue: [
-	helpString displayOn: stdout.
-	ObjectMemory quit: 0 ].
+	    opt = 'help' ifTrue: [
+		helpString displayOn: stdout.
+		ObjectMemory quit: 0 ].
+	    
+	    opt = 'version' ifTrue: [
+		('gst-sunit - %1' % {Smalltalk version}) displayNl.
+		ObjectMemory quit: 0 ].
+	    
+	    
+	    opt = 'verbose' ifTrue: [
+		OutputVerbosity := 1.
+		quiet := false.
+		verbose := true.
+		FileStream verbose: true ].
 
-    opt = 'version' ifTrue: [
-	('gst-sunit - %1' % {Smalltalk version}) displayNl.
-	ObjectMemory quit: 0 ].
+	    opt = 'quiet' ifTrue: [
+		OutputVerbosity := 0.
+		quiet := true.
+		verbose := false.
+		FileStream verbose: false ].
 
+	    opt = 'package' ifTrue: [
+		[
+		    package := PackageLoader packageAt: arg.
+		    script := script, ' ', package sunitScript.
+		    package test notNil ifTrue: [
+			package := package test.
+			script := script, ' ', package sunitScript ].
+		    package fileIn ]
+	    	ifCurtailed: [ ObjectMemory quit: 2 ] ].
+	    
+	    opt = 'code-coverage' ifTrue: [
+		coverage := true
+	    ].
 
-    opt = 'verbose' ifTrue: [
-        OutputVerbosity := 1.
-	quiet := false.
-	verbose := true.
-	FileStream verbose: true ].
+	    opt = 'file' ifTrue: [
+		[ FileStream fileIn: arg ]
+		    ifCurtailed: [ ObjectMemory quit: 2 ] ].
 
-    opt = 'quiet' ifTrue: [
-        OutputVerbosity := 0.
-	quiet := true.
-	verbose := false.
-	FileStream verbose: false ].
-
-    opt = 'package' ifTrue: [
-	[
-	    package := PackageLoader packageAt: arg.
-	    script := script, ' ', package sunitScript.
-	    package test notNil ifTrue: [
-		package := package test.
-	        script := script, ' ', package sunitScript ].
-	    package fileIn ]
-	    ifCurtailed: [ ObjectMemory quit: 2 ] ].
-
-    opt = 'code-coverage' ifTrue: [
-	coverage := true
-    ].
-
-    opt = 'file' ifTrue: [
-	[ FileStream fileIn: arg ]
-	    ifCurtailed: [ ObjectMemory quit: 2 ] ].
-
-    opt isNil ifTrue: [
-	script := script, ' ', arg ] ]
+	    opt isNil ifTrue: [
+		script := script, ' ', arg ] ]
 
     ifError: [
 	helpString displayOn: stderr.
 	ObjectMemory quit: 1 ].
 
-script isEmpty ifTrue: [ ObjectMemory quit ].
+    script isEmpty ifTrue: [ ObjectMemory quit ].
 
-FileStream verbose: false.
-(PackageLoader packageAt: #SUnit) loaded
-    ifFalse: [
+    FileStream verbose: false.
+    (PackageLoader packageAt: #SUnit) loaded ifFalse: [
 	stderr nextPutAll: 'gst-sunit: you should load SUnit first.'; nl.
 	ObjectMemory quit: 1 ].
 
-coverage 
-    ifTrue: [
-	coverageResult := (CodeCoverageTester on: package namespace)
-	    withCoverageDo: [result := TestSuitesScripter 
+    coverage 
+	ifTrue: [
+	    coverageResult := (CodeCoverageTester on: package namespace)
+		withCoverageDo: [result := TestSuitesScripter 
 			     run: script 
 			     quiet: quiet 
 			     verbose: verbose]]
-    ifFalse: [
+	ifFalse: [
 	    result := TestSuitesScripter 
 		run: script 
 		quiet: quiet 
 		verbose: verbose].
-coverageResult ifNotNil: [
-    coverageResult printResult].
-result runCount = result passedCount
-    ifFalse: [ ObjectMemory quit: 1 ]!
+    coverageResult ifNotNil: [
+	coverageResult printResult].
+    result runCount = result passedCount ifFalse: [ 
+	ObjectMemory quit: 1 ]
+]
