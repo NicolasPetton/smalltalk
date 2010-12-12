@@ -29,15 +29,15 @@
  ======================================================================"
 
 Eval [
-    Smalltalk arguments isEmpty ifTrue: [ ObjectMemory quit ]
+    Smalltalk arguments isEmpty ifTrue: [ ObjectMemory quit ].
 	PackageLoader fileInPackage: 'SUnit']
 
 Eval [
-    | helpString verbose package coverage ceverageResult script suite result quiet |
+    | helpString verbose package coverageCategory ceverageResult script suite result quiet |
     quiet := false.
     verbose := false.
     FileStream verbose: false.
-    coverage := false.
+    coverageCategory := ''.
     script := ''.
     package := ''.
 
@@ -47,21 +47,21 @@ Eval [
     gst-sunit [ flag ... ] class.tests ...
 
 Options:
-    -q --quiet            hide the output
-    -v --verbose          show passed tests
-    -f --file=FILE        load file before running subsequent tests
-    -p --package=PACKAGE  load package and run its tests
-    -c --code-coverage    show the code coverage of a namespace
-    -I --image-file=FILE  run tests on the specified image file
-       --kernel-dir=PATH  use the specified kernel directory
-    -h --help             show this message and exit
-       --version          print version information and exit
+    -q --quiet                hide the output
+    -v --verbose              show passed tests
+    -f --file=FILE            load file before running subsequent tests
+    -p --package=PACKAGE      load package and run its tests
+    -c --coverage=CATEGORY    show the code coverage of category
+    -I --image-file=FILE      run tests on the specified image file
+       --kernel-dir=PATH      use the specified kernel directory
+    -h --help                 show this message and exit
+       --version              print version information and exit
 
 '.
 
 "Parse the command-line arguments."
     Smalltalk
-	arguments: '-h|--help -q|--quiet -v|-V|--verbose -f|--file: -c|--code-coverage -p|--package: -I|--image-file: --kernel-directory: --version'
+	arguments: '-h|--help -q|--quiet -v|-V|--verbose -f|--file: -c|--coverage: -p|--package: -I|--image-file: --kernel-directory: --version'
 	do: [ :opt :arg |
 
 	    opt = 'help' ifTrue: [
@@ -95,8 +95,8 @@ Options:
 		    package fileIn ]
 	    	ifCurtailed: [ ObjectMemory quit: 2 ] ].
 	    
-	    opt = 'code-coverage' ifTrue: [
-		coverage := true
+	    opt = 'coverage' ifTrue: [
+		coverageCategory := arg
 	    ].
 
 	    opt = 'file' ifTrue: [
@@ -117,14 +117,16 @@ Options:
 	stderr nextPutAll: 'gst-sunit: you should load SUnit first.'; nl.
 	ObjectMemory quit: 1 ].
 
-    coverage 
-	ifTrue: [
-	    coverageResult := (CodeCoverageTester on: package namespace)
-		withCoverageDo: [result := TestSuitesScripter 
-			     run: script 
-			     quiet: quiet 
-			     verbose: verbose]]
+    coverageCategory isEmpty
 	ifFalse: [
+		    coverageResult := (CodeCoverageTester 
+			on: coverageCategory 
+			of: package namespace) withCoverageDo: [
+			    result := TestSuitesScripter 
+				run: script 
+				quiet: quiet 
+				verbose: verbose]]
+	ifTrue: [
 	    result := TestSuitesScripter 
 		run: script 
 		quiet: quiet 

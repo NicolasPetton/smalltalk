@@ -16,17 +16,18 @@ MethodWrapper subclass: CodeCoverageWrapper [
 ]
 
 Object subclass: CodeCoverageTester [
-    | namespace |
+    | namespace category |
 
     <category: 'SUnit-CodeCoverage'>
     <comment: nil>
 
     CodeCoverageTester class [
 
-	on: aNamespaceString [
+	on: aString of: anotherString [
 	    <category: 'instance creation'>
 	    ^self new
-		namespace: (self lookupNamespace: aNamespaceString);
+		category: aString;
+		namespace: (self lookupNamespace: anotherString);
 		yourself
 	]
     
@@ -55,10 +56,23 @@ Object subclass: CodeCoverageTester [
 	namespace := aNamespace
     ]
 
+    category [
+	<category: 'accessing'>
+	^category
+    ]
+
+    category: aString [
+	<category: 'accessing'>
+	category := aString
+    ]
+
     classesDo: aBlock [
 	<category: 'enumerating'>
 	self namespace withAllSubspacesDo: [:each |
-	    each allClassesDo: aBlock]
+	    each allClassesDo: [:class |
+		(class category notNil and: [
+		    class category matchRegex: '^', self category, '.*']) ifTrue: [
+		    aBlock value: class]]]
     ]
 
     methods [
